@@ -4,3 +4,14 @@ __pycache__/
 # Python virtual environment
 venv/
 *.local
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.production
+.env.development
+
+# IDE files
+.vscode/
+.idea/
+*.pyc
