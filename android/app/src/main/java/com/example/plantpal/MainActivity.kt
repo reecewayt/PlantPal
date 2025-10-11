@@ -21,31 +21,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
+import com.example.plantpal.screens.sign_in.SignInScreen
 import com.example.plantpal.ui.theme.PlantPalTheme
-import com.google.android.gms.tasks.Task
-import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.functions
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
 
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     private lateinit var functions: FirebaseFunctions
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         functions = Firebase.functions
-        // uncomment when testing locally with firebase functions emulator
-        functions.useEmulator("10.0.2.2", 5001)
+        auth = Firebase.auth
+        configFirebaseServices()
+
         setContent {
             PlantPalTheme {
                 // A surface container using the 'background' color from the theme
@@ -53,21 +50,44 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // State to hold the response from the Firebase Function
-                    var greetingMessage by remember { mutableStateOf("") }
-                    // LaunchedEffect will run the coroutine when the composable enters the composition
-                    LaunchedEffect(Unit) {
-                        greetingMessage = try {
-                            plantPalChat(message = "Will to tell me what the moisture is reading on my sensor?")
+                    var isSignedIn by remember { mutableStateOf(auth.currentUser != null) }
+                    if (isSignedIn) {
+                        // State to hold the response from the Firebase Function
+                        var greetingMessage by remember { mutableStateOf("") }
+                        // LaunchedEffect will run the coroutine when the composable enters the composition
+                        LaunchedEffect(Unit) {
+                            greetingMessage = try {
+                                plantPalChat(message = "Will you tell me what the moisture is reading on my sensor?")
 
-                        } catch (e:Exception) {
-                            "Error: ${e.message}"
+                            } catch (e: Exception) {
+                                "Error: ${e.message}"
+                            }
                         }
-                    }
 
-                    Greeting(message = greetingMessage)
+                        Greeting(message = greetingMessage)
+                    } else {
+                        SignInScreen(openAndPopUp = { _, _ -> isSignedIn = true })
+                    }
                 }
             }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (auth.currentUser != null) {
+            Log.d("MainActivity", "User is signed in")
+            Log.d("MainActivity", "User ID: ${auth.currentUser?.uid}")
+            Log.d("MainActivity", "User email: ${auth.currentUser?.email}")
+            Log.d("MainActivity", "Signing user out")
+            auth.signOut()
+        }
+    }
+
+    private fun configFirebaseServices() {
+        if(BuildConfig.DEBUG){
+            Firebase.auth.useEmulator(LOCALHOST, AUTH_PORT)
+            Firebase.functions.useEmulator(LOCALHOST, FIREBASE_FUNCTIONS_PORT)
         }
     }
 

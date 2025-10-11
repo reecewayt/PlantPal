@@ -7,4 +7,5 @@ const val SPLASH_SCREEN = "SplashScreen"   // TODO: Implement splash screen
 
 
 const val LOCALHOST = "10.0.2.2"
-const val FIRESTORE_PORT = 5001
+const val AUTH_PORT = 9099
+const val FIREBASE_FUNCTIONS_PORT = 5001
