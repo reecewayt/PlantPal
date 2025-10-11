@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
         configFirebaseServices()
 
         setContent {
-            PlantPalTheme {
+            PlantPalTheme(dynamicColor = false) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -160,9 +160,7 @@ fun Greeting(message: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    PlantPalTheme {
+    PlantPalTheme(dynamicColor = false) {
         Greeting("Hello from Firebase Functions (Python)!")
     }
 }
-
-

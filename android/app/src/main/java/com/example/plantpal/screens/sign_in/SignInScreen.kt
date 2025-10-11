@@ -179,7 +179,7 @@ fun SignInScreenContent(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun AuthPreview() {
-    PlantPalTheme {
+    PlantPalTheme (dynamicColor = false) {
         SignInScreenContent(
             email = "test@email.com",
             password = "password",
