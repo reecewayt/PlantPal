@@ -44,6 +44,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         functions = Firebase.functions
+        // uncomment when testing locally with firebase functions emulator
+        functions.useEmulator("10.0.2.2", 5001)
         setContent {
             PlantPalTheme {
                 // A surface container using the 'background' color from the theme
@@ -56,7 +58,8 @@ class MainActivity : ComponentActivity() {
                     // LaunchedEffect will run the coroutine when the composable enters the composition
                     LaunchedEffect(Unit) {
                         greetingMessage = try {
-                            backendHelloWorld("Testing backend")
+                            plantPalChat(message = "Will to tell me what the moisture is reading on my sensor?")
+
                         } catch (e:Exception) {
                             "Error: ${e.message}"
                         }
@@ -84,6 +87,34 @@ class MainActivity : ComponentActivity() {
 
         val resultMap = result.data as? Map<String, Any>
         return resultMap?.get("message") as? String ?: "Error"
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun plantPalChat(message: String, chatThreadId: String? = "abc_123"): String {
+        val data = hashMapOf(
+            "message" to message,
+            "thread_id" to chatThreadId
+        )
+
+        try {
+            // Call the function and await the result
+            val result = functions
+                .getHttpsCallable("plantpal_chat")
+                .call(data)
+                .await() // This suspends the coroutine until the task is complete
+
+            val resultMap = result.data as? Map<String, Any>
+            val success = resultMap?.get("success") as? Boolean ?: false
+
+            return if (success) {
+                resultMap?.get("response") as? String ?: "No response received"
+            } else {
+                "Error: Failed to get response from PlantPal"
+            }
+
+        } catch (e: Exception) {
+            return "Error: ${e.message}"
+        }
     }
 }
 
