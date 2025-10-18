@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<hivemq-google-cloud-pubsub-extension xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                      xsi:noNamespaceSchemaLocation="config.xsd">
+
+    <pubsub-connections>
+        <pubsub-connection>
+            <id>connection01</id>
+            <google-cloud-project-id>glcoud-proj-name</google-cloud-project-id>
+            <authentication>
+                <service-account>
+                    <file-path>path/to/your/service-account-file.json</file-path>
+                </service-account>
+            </authentication>
+        </pubsub-connection>
+    </pubsub-connections>
+
+    <mqtt-to-pubsub-mappings>
+        <mqtt-to-pubsub-mapping>
+            <id>mapping-01</id>
+            <pubsub-connection>connection01</pubsub-connection>
+            <mqtt-topic-filters>
+                <mqtt-topic-filter>topic/a</mqtt-topic-filter>
+            </mqtt-topic-filters>
+            <pubsub-topics>
+                <pubsub-topic>
+                    <name>MyTestTopic</name>
+                </pubsub-topic>
+            </pubsub-topics>
+            <pubsub-attributes>
+                <pubsub-attribute>
+                    <key>my-key-1</key>
+                    <mqtt-topic/>
+                </pubsub-attribute>
+                <pubsub-attribute>
+                    <key>my-key-2</key>
+                    <value>my-value</value>
+                </pubsub-attribute>
+            </pubsub-attributes>
+        </mqtt-to-pubsub-mapping>
+    </mqtt-to-pubsub-mappings>
+
+    <pubsub-to-mqtt-mappings>
+        <pubsub-to-mqtt-mapping>
+            <id>mapping-02</id>
+            <pubsub-connection>connection01</pubsub-connection>
+            <mqtt-topics>
+                <mqtt-topic>test/topic</mqtt-topic>
+            </mqtt-topics>
+            <pubsub-subscriptions>
+                <pubsub-subscription>
+                    <name>MyTestTopic-sub</name>
+                </pubsub-subscription>
+            </pubsub-subscriptions>
+        </pubsub-to-mqtt-mapping>
+    </pubsub-to-mqtt-mappings>
+
+</hivemq-google-cloud-pubsub-extension>
