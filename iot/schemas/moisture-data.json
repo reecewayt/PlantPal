@@ -1,0 +1,15 @@
+{
+    "type" : "record",
+    "name" : "PlantPalSoilTelemetry",
+    "fields" : [
+        {
+            "name" : "percentage",
+            "type" : "double"
+        },
+        {
+            "name" : "timestamp",
+            "type" : "long",
+            "logicalType" : "timestamp-millis"
+        }
+    ]
+}

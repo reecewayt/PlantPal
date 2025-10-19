@@ -1,0 +1,41 @@
+#include "config.h"
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <MQTT.h>
+
+
+void messageReceived(String &topic, String &payload) {
+
+    // `topic` is an Arduino String, which can't be used in a switch statement.
+    // Use if/else string comparisons instead.
+    if (topic == SUB_MOISTURE_TOPIC) {
+        // TODO: Handle soil moisture request
+    }
+    else if (topic == SUB_WATER_TOPIC) {
+        // TODO: Handle water level request
+    }
+    else {
+        // Unknown topic
+        // TODO: Handle unknown topic
+    }
+
+}
+
+/**
+ * @brief Moisture topic payload maps to a google pub/sub topic which has a
+ * specific JSON structure. In this case, we need to format the payload accordingly.
+ * See /schemas/moisture-data.json for the expected structure.
+ *
+ * @param moisturePercent
+ * @param timestamp
+ * @return Serialized JSON String
+ */
+String formatMoistureTopicPayload(double moisturePercent, unsigned long timestamp) {
+    // Use a DynamicJsonDocument with a small buffer to avoid template issues
+    DynamicJsonDocument doc(128);
+    doc["percentage"] = moisturePercent;
+    doc["timestamp"] = timestamp;
+    String output;
+    serializeJson(doc, output);
+    return output;
+}
