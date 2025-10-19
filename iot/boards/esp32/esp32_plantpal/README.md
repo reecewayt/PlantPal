@@ -70,3 +70,33 @@ Tips
 
 When to use the Web UI
 - The HiveMQ Web UI (http://localhost:8080) is great for quick manual exploration, visual subscription, and publishing, but CLI tools are better for repeatable tests and scripting.
+
+# Schemas
+
+Moisture Data Schema
+Define in google pub/sub schemas
+```json
+{
+  "type": "record",
+  "name": "PlantPalSoilTelemtry",
+  "fields": [
+    {
+      "name": "percentage",
+      "type": "double"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}
+```
+
+Example message test
+```json
+{
+"percentage": 42.5,
+"timestamp": 1697666103000
+}
+```

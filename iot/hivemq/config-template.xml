@@ -19,21 +19,25 @@
             <id>mapping-01</id>
             <pubsub-connection>connection01</pubsub-connection>
             <mqtt-topic-filters>
-                <mqtt-topic-filter>topic/a</mqtt-topic-filter>
+                <mqtt-topic-filter>plantpal/data/moisture</mqtt-topic-filter>
             </mqtt-topic-filters>
             <pubsub-topics>
                 <pubsub-topic>
-                    <name>MyTestTopic</name>
+                    <name>data-moisture</name>
                 </pubsub-topic>
             </pubsub-topics>
             <pubsub-attributes>
                 <pubsub-attribute>
-                    <key>my-key-1</key>
+                    <key>mqtt_topic</key>
                     <mqtt-topic/>
                 </pubsub-attribute>
                 <pubsub-attribute>
-                    <key>my-key-2</key>
-                    <value>my-value</value>
+                    <key>encoding</key>
+                    <value>json</value>
+                </pubsub-attribute>
+                <pubsub-attribute>
+                    <key>schema</key>
+                    <value>moisture-data.json</value>
                 </pubsub-attribute>
             </pubsub-attributes>
         </mqtt-to-pubsub-mapping>

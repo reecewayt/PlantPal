@@ -1,3 +1,3 @@
 .idea
-/iot/boards/esp32/esp32_plantpal/config.h
 .DS_Store
+passwords.h
