@@ -1,5 +1,5 @@
-# PlantPal ESP32 Project Structure
-
+# PlantPal ESP32 Project
+\\
 
 ## HiveMQ
 ### Setup
