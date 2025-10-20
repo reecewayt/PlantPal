@@ -48,14 +48,30 @@
             <id>mapping-02</id>
             <pubsub-connection>connection01</pubsub-connection>
             <mqtt-topics>
-                <mqtt-topic>test/topic</mqtt-topic>
+                <mqtt-topic>plantpal/request_soil</mqtt-topic>
             </mqtt-topics>
             <pubsub-subscriptions>
                 <pubsub-subscription>
-                    <name>MyTestTopic-sub</name>
+                    <name>request-soil-sub</name>
                 </pubsub-subscription>
             </pubsub-subscriptions>
         </pubsub-to-mqtt-mapping>
+
+        <pubsub-to-mqtt-mapping>
+            <id>mapping-03</id>
+            <pubsub-connection>connection01</pubsub-connection>
+            <mqtt-topics>
+                <mqtt-topic>plantpal/request_water</mqtt-topic>
+            </mqtt-topics>
+            <pubsub-subscriptions>
+                <pubsub-subscription>
+                    <name>request-water-sub</name>
+                </pubsub-subscription>
+            </pubsub-subscriptions>
+        </pubsub-to-mqtt-mapping>
+        <!-- Add more pubsub-to-mqtt-mapping entries as needed here-->
     </pubsub-to-mqtt-mappings>
+
+
 
 </hivemq-google-cloud-pubsub-extension>

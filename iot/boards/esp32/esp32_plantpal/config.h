@@ -23,6 +23,8 @@
 
 // ============================================
 // MQTT Topics
+// IMPORTANT: Update to these topics will need to be updated in
+// your HiveMQ Google Pub/Sub extension configuration as well.
 // ============================================
 #define SUB_MOISTURE_TOPIC      "plantpal/request_soil"
 #define SUB_WATER_TOPIC         "plantpal/request_water"
@@ -49,4 +51,11 @@
 // Debug Settings
 // ============================================
 #define SERIAL_BAUD_RATE        115200
-#define ENABLE_DEBUG_OUTPUT     true
+#define ENABLE_DEBUG_OUTPUT // Comment out to disable debug logs
+
+
+#ifdef ENABLE_DEBUG_OUTPUT
+    #define DEBUG_LOG(tag, msg) Serial.print("["); Serial.print(tag); Serial.print("] "); Serial.println(msg);
+#else
+    #define DEBUG_LOG(tag, msg) // No-op when debug output is disabled
+#endif
