@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.plantpal.screens.sign_in.SignInScreen
+import com.example.plantpal.screens.chat_interface.ChatInterfaceScreen
 import com.example.plantpal.ui.theme.PlantPalTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -66,7 +67,8 @@ class MainActivity : ComponentActivity() {
 
                         Greeting(message = greetingMessage)
                     } else {
-                        SignInScreen(openAndPopUp = { _, _ -> isSignedIn = true })
+                        ChatInterfaceScreen()
+                        //SignInScreen(openAndPopUp = { _, _ -> isSignedIn = true })
                     }
                 }
             }
