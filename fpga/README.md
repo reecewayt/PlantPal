@@ -1,175 +1,109 @@
-# Plant-Pal Project
+# Plant-Pal FPGA Project Setup
 
-Welcome to the Plant-Pal project\! This is a hardware/software co-design project that integrates an FPGA design (Vivado/Vitis) with an Android application and Firebase backend.
+This guide provides instructions for setting up the hardware project for both software (Vitis) and hardware (Vivado) development.
 
-This README provides the setup instructions and development workflow, with a special focus on the `fpga/` directory.
+## 🚀 Quick Start (Software Only - Vitis)
 
-## 📦 Project Structure
+If you are only working on the C/C++ software, you **do not** need to build the Vivado project. You can use one of the pre-built hardware platforms.
 
-```
-plant-pal/
-├── android/            # Android application source code
-├── firebase/           # Firebase cloud functions and rules
-├── fpga/
-│   ├── build/            # IGNORED: All generated Vivado/Vitis project files
-│   ├── platform/         # TRACKED: The exported .xsa hardware platform
-│   │   └── plant_pal_platform.xsa
-│   ├── scripts/          # TRACKED: Tcl script to rebuild the Vivado project
-│   │   └── create_project.tcl
-│   ├── src/              # TRACKED: All hardware source files
-│   │   ├── bd/           # Block Designs (.bd)
-│   │   ├── constraints/  # Constraint files (.xdc)
-│   │   └── hdl/          # Verilog/VHDL source files (.v, .vhd)
-│   └── vitis_src/        # TRACKED: Vitis (C/C++) application sources
-├── .gitignore
-├── LICENSE
-└── README.md
-```
-
-## 🛠 FPGA Development Workflow
-
-To avoid version-control conflicts and keep our repository clean, we follow a script-based workflow.
-
-**Our Philosophy:** We **DO NOT** commit the generated Vivado project (`.xpr` file) or any build artifacts. We only track the *source files* (`src/`) and a *Tcl script* (`scripts/`) that rebuilds the project from those sources.
-
-### Prerequisites
-
-  * Vivado & Vitis (202x.x)
-  * Git
+1.  Launch Vitis.
+2.  Create a new Application Project.
+3.  When asked for a platform, choose **"Create a new platform from hardware (XSA)"**.
+4.  Browse to the `.xsa` file that matches your board:
+      * **Nexys 4:** `fpga/hw_platform/hw_platform_nexys4.xsa`
+      * **Nexys 7:** `fpga/hw_platform/hw_platform_nexys7.xsa`
+5.  You can now build your software project on top of this platform.
 
 -----
 
-### 🚀 First-Time Project Setup (Walkthrough)
+## 🏗️ Getting started or Rebuilding the Vivado Project (Hardware)
 
-This is a step-by-step guide to building the Vivado project for the first time.
+If you need to modify the FPGA hardware (e.g., change the block design, add IP) or are just getting started and want to setup the vivado hardware platform, you must rebuild the project using the included Tcl script.
 
-1.  **Clone the Repository:**
+### 1\. Create the Project
 
-    ```bash
-    git clone [your-repo-url]
-    cd plant-pal
-    ```
-
-2.  **Open Vivado:** Launch the main Vivado IDE.
-
-3.  **Open the Tcl Console:** At the bottom of the Vivado window, click the `Tcl Console` tab.
-
-4.  **Navigate to the Scripts Directory:** Use the `cd` command in the Tcl console to navigate to the `fpga/scripts` directory.
-
-    > **Note:** Tcl uses forward slashes `/` for paths, even on Windows.
-
+1.  Open the Vivado Tcl Console (e.g., from the start menu or by opening Vivado and clicking `Window > Tcl Console`).
+2.  In the Tcl Console, change the directory to the `fpga/` folder in this repository.
     ```tcl
     # Example:
-    cd C:/path/to/plant-pal/fpga/scripts
-
-    # Or, if you're at the project root already:
-    cd ./fpga/scripts
+    cd C:/git/plant-pal/fpga
     ```
-
-5.  **Run the Create Script:**
-
+3.  Source the build script to create the project.
     ```tcl
-    source ./create_project.tcl
+    source create_project.tcl
     ```
+4.  The script will run and create a full Vivado project in the `build/plant_pal_fpga` directory.
 
-6.  **What Happens Next:** The script will run for 30-60 seconds. It will create a new Vivado project inside the `fpga/build/plant_pal_fpga` directory, adding all the correct sources and constraint files from the `src/` folder.
+### 2\. Open and Modify the Project
 
-7.  **Open the Project:** Now, you can open the project in the GUI.
+1.  In Vivado, click **"Open Project"**.
+2.  Navigate to `build/plant_pal_fpga` and open the `plant_pal_fpga.xpr` file.
+3.  You can now make any changes to the block design (`design_1.bd`) or HDL files.
 
-      * Go to **File \> Open Project...**
-      * Navigate to and select `fpga/build/plant_pal_fpga/plant_pal_fpga.xpr`.
+### 3\. Switching Target Boards
 
-You now have a fully functional project.
+This project supports both the Nexys 4 and Nexys 7. The build script adds constraint files for both.
 
------
+  * **By default, `nexys4.xdc` is active.**
+  * To switch to the Nexys 7, open the project in the GUI, go to the **"Sources"** window, right-click on `nexys7.xdc`, select **"Set as Active"** (or uncheck "IS\_ENABLED" on the Nexys 4 file and check it on the Nexys 7 file).
 
-### BOARD-SPECIFIC SETUP: Activating Your Constraint File
+### 4\. Exporting Your Changes (Important\!)
 
-The project has two constraint files, but only one can be active. The script enables the `nexys4.xdc` by default.
+If you modify the hardware, you **must** export a new `.xsa` file so it can be used in vitis.
 
-#### For Nexys 4 Users (Default)
+1.  After running Implementation, select **File \> Export \> Export Hardware...**.
+2.  Choose **"Include bitstream"**.
+3.  Save the file, overwriting the old `.xsa` in the `fpga/hw_platform/` directory.
+4.  **Commit the new `.xsa` file to Git.**
 
-You are all set\! The `nexys4.xdc` is already active. You can run synthesis and implementation.
+## Manage project with Git
+Here is the "Manage project with Git" section for your README.
 
-#### For Nexys 7 Users
+---
 
-You must manually swap the active constraint file. **You only need to do this once.**
+## Manage Project with Git
 
-1.  In the **"Sources"** pane, expand **"Constraints"** \> **"constrs\_1"**.
-2.  You will see:
-      * `nexys4.xdc (Enabled)`
-      * `nexys7.xdc (Disabled)`
-3.  Right-click on `nexys4.xdc` and select **"Disable File..."**.
-4.  Right-click on `nexys7.xdc` and select **"Enable File..."**.
+### Core Philosophy
 
-You are now ready to run synthesis and implementation on your Nexys 7 board. Vivado will remember this setting for this project (since it's in the `build/` folder, which is ignored).
+This repository **does not** track the Vivado project file (`.xpr`) or any generated `build/` files. Instead, we use a "source-based" approach.
 
------
+We only track the essential *source files* required to rebuild the entire project from scratch using the `fpga/create_project.tcl` script. This keeps the repository lightweight, avoids "untrackable" binary changes, and ensures all developers have a consistent setup.
 
-## 🔁 How to Modify the Project (Adding Files)
+### What We Track
 
-To keep the project in sync, follow these rules.
+The only files that are tracked by Git are the project "sources":
 
-### 1\. Adding New HDL Files (`.v` / `.vhd`)
+1.  **`fpga/create_project.tcl`**: The main script used to build the Vivado project.
+2.  **`fpga/vivado_src/`**: This directory contains all the human-written source code:
+    * `hdl/`: All top-level Verilog/SystemVerilog files (`.sv`).
+    * `constraints/`: The board-specific pin-out files (`.xdc`).
+    * `bd/`: The Vivado Block Design (`design_1.bd`) and its metadata (`.bda`).
+3.  **`fpga/hw_platform/`**: The generated hardware definitions (`.xsa` files) that Vitis needs to build the software.
 
-1.  **DO NOT** use the "Add Sources" button in the GUI.
-2.  **Instead:** Save your new file (e.g., `my_module.v`) directly into the `fpga/src/hdl/` directory.
-3.  **That's it\!** The `create_project.tcl` script automatically finds and adds *all* files in that directory.
-4.  Commit your new file to Git:
-    ```bash
-    git add fpga/src/hdl/my_module.v
-    git commit -m "Added new HDL module"
-    ```
+Any other file (like the entire `build/` directory) is ignored by Git.
 
-### 2\. Modifying the Block Design (`.bd`)
+### Team Workflow & Committing Changes
 
-This is the one exception where you will use the GUI.
+**All changes should be submitted as a Pull Request (PR)**. This is crucial for keeping the hardware and software definitions in sync for the whole team.
 
-1.  Open the project (`fpga/build/plant_pal_fpga.xpr`).
-2.  Open the Block Design (`design_1.bd`) from the "Sources" pane.
-3.  Make your changes and **Save the Block Design**.
-4.  The script links directly to the file in `fpga/src/bd/`. When you save, you are modifying the *tracked* file.
-5.  Commit your changes:
-    ```bash
-    git add fpga/src/bd/design_1.bd
-    git commit -m "Updated block design with new AXI timer"
-    ```
+#### If You Change the Hardware (e.g., update `design_1.bd` or HDL):
 
-### 3\. Updating the Hardware Platform for Vitis (`.xsa`)
+This is the most critical workflow. You **must** commit both the source *and* the exported result.
 
-After you run synthesis and implementation, you must export the hardware so Vitis can use it.
+1.  Open the Vivado project (or rebuild it using the Tcl script).
+2.  Make your changes to the Block Design or HDL.
+3.  Run Synthesis and Implementation to ensure your changes are valid.
+4.  Export the new hardware platform: **File > Export > Export Hardware...**
+5.  Save the new `.xsa` file to the `fpga/hw_platform/` directory, overwriting the old one for your board.
+6.  **Commit your changes.** Your commit **must** include:
+    * The updated source file (e.g., `fpga/vivado_src/bd/design_1.bd`).
+    * The newly exported hardware file (e.g., `fpga/hw_platform/hw_platform_nexys4.xsa`).
+7.  Open a Pull Request with a clear description of your hardware changes.
 
-1.  In Vivado, go to **File \> Export \> Export Hardware...**
-2.  A wizard will pop up.
-3.  On the "Output" page, select **"Include Bitstream"**.
-4.  For "File name," **CRITICAL:** Save the file *directly* over the old one:
-    `fpga/platform/plant_pal_platform.xsa`
-5.  Click "Finish".
-6.  Commit the updated platform file:
-    ```bash
-    git add fpga/platform/plant_pal_platform.xsa
-    git commit -m "Updated hardware platform (XSA)"
-    ```
+#### If You Only Change Software (e.g., update `.c` files in Vitis):
 
-### 4\. Adding/Modifying Vitis Source Code (`.c` / `.h`)
+1.  Make your changes to the software source.
+2.  Commit the updated software files.
+3.  Open a Pull Request.
 
-1.  All Vitis source code lives in `fpga/vitis_src/`.
-2.  Add, edit, and delete files in this folder as you normally would.
-3.  Commit any changes to this folder.
-
-## Git & Version Control Summary
-
-### ✔️ What We Track (Commit This)
-
-  * `fpga/scripts/` (The "recipe")
-  * `fpga/src/` (The "ingredients": HDL, BD, constraints)
-  * `fpga/vitis_src/` (The software source)
-  * `fpga/platform/plant_pal_platform.xsa` (The hardware/software handoff)
-  * `android/`
-  * `firebase/`
-  * `README.md`, `LICENSE`, `.gitignore`
-
-### ❌ What We Ignore (Do NOT Commit)
-
-  * `fpga/build/` (The entire generated project)
-  * Any `.log`, `.jou`, or `.cache` files. (The `.gitignore` handles this)
+This workflow ensures that any developer who pulls the `main` branch will always have the correct `.xsa` file to match the latest hardware sources.
