@@ -1,1 +1,20 @@
 .idea
+build
+
+# Ignore generated IP products
+**/ip/
+
+# Ignore user-specific UI state
+**/ui/
+**/hw_handoff/
+**/hdl/
+**/ipshared/
+**/sim/
+**/synth/
+fpga/vivado_src/bd/**/*.xdc
+fpga/vivado_src/bd/**/*.bmj
+fpga/vivado_src/bd/**/*.bmm
+fpga/vivado_src/bd/**/*.v
+# Ignore generated XML files
+*.bxml
+
