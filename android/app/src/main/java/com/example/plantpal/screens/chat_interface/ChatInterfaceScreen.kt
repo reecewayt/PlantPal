@@ -30,6 +30,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,10 +38,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-
-import com.example.plantpal.R
-import com.example.plantpal.screens.chat_interface.ChatViewModel
 import com.example.plantpal.ui.theme.PlantPalTheme
+import kotlinx.coroutines.launch
+
 
 // 1. Data model for a single message
 data class ChatMessage(
@@ -61,6 +61,7 @@ fun ChatInterfaceScreen(
     val messages by viewModel.messages.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
     val isToggled by viewModel.isToggled.collectAsState()
+    val chatThreadID by viewModel.chatThreadID.collectAsState()
 
     ChatInterfaceContent(
         modifier = modifier,
@@ -70,7 +71,8 @@ fun ChatInterfaceScreen(
         updateUserMessage = viewModel::updateUserMessage,
         queryFB = viewModel::queryFB,
         toggleSettings = viewModel::toggleSettings,
-        resetChat = viewModel::resetChat
+        resetChat = viewModel::resetChat,
+        logout = viewModel::logout
     )
 }
 
@@ -83,96 +85,100 @@ fun ChatInterfaceContent(
     userMessage: String,
     isToggled: Boolean,
     updateUserMessage: (String) -> Unit,
-    queryFB: () -> Unit,
+    queryFB: suspend () -> Unit,
     toggleSettings: () -> Unit,
-    resetChat: () -> Unit
+    resetChat: () -> Unit,
+    logout: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
 
-Box(modifier = Modifier.fillMaxSize()) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Plant Pal")
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Plant Pal")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    actions = {
+                        IconButton(onClick = { toggleSettings() }) {
+                            Icon(
+                                // Suggestion 4: Provide visual feedback for the toggled state
+                                imageVector = if (isToggled) {
+                                    Icons.Filled.Settings
+                                } else {
+                                    Icons.Outlined.Settings
+                                },
+                                contentDescription = "Toggle settings",
+                                modifier = Modifier.size(24.dp),
+                                tint = if (isToggled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                actions = {
-                    IconButton(onClick = { toggleSettings() }) {
-                        Icon(
-                            // Suggestion 4: Provide visual feedback for the toggled state
-                            imageVector = if (isToggled) {
-                                Icons.Filled.Settings
-                            } else {
-                                Icons.Outlined.Settings
-                            },
-                            contentDescription = "Toggle settings",
-                            modifier = Modifier.size(24.dp),
-                            tint = if (isToggled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                )
+            },
+            bottomBar = {
+                UserInputBar(
+                    currentText = userMessage,
+                    onTextChanged = { updateUserMessage(it) },
+                    onSendClicked = {
+                        if (userMessage.isNotBlank()) {
+                            scope.launch {
+                                queryFB()
+                            }
+                        }
                     }
+                )
+            }
+        ) { innerPadding ->
+            // The list of messages
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                reverseLayout = true // Important for chat UIs
+            ) {
+                items(messages.reversed()) { message ->
+                    MessageBubble(message = message)
                 }
-            )
-        },
-        bottomBar = {
-            UserInputBar(
-                currentText = userMessage,
-                onTextChanged = { updateUserMessage(it) },
-                onSendClicked = {
-                    if (userMessage.isNotBlank()) {
-                        queryFB()
-                    }
-                }
-            )
+            }
         }
-    ) { innerPadding ->
-        // The list of messages
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            reverseLayout = true // Important for chat UIs
-        ) {
-            items(messages.reversed()) { message ->
-                MessageBubble(message = message)
+
+        if (isToggled) {
+            ModalBottomSheet(
+                onDismissRequest = { toggleSettings() },
+            ) {
+                // Reset Chat
+                Button(
+                    onClick = {
+                        resetChat()
+                        toggleSettings()
+                    },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                ) {
+                    Text("Reset Chat")
+                }
+                // Logout Button
+                Button(
+                    onClick = { logout() },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                ) {
+                    Text("Logout")
+                }
             }
         }
     }
-
-    if (isToggled) {
-        ModalBottomSheet(
-            onDismissRequest = { toggleSettings() },
-        ) {
-            // Reset Chat
-            Button(
-                onClick = {
-                    resetChat()
-                    toggleSettings()
-                },
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-            ) {
-                Text("Reset Chat")
-            }
-            // Logout Button
-            Button(
-                onClick = { /* Handle logout button click */ },
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-            ) {
-                Text("Logout")
-            }
-        }
-    }
-}
 }
 
 // 3. The input field and send button at the bottom
@@ -248,7 +254,8 @@ fun ChatInterfacePreview() {
             updateUserMessage = {},
             queryFB = {},
             toggleSettings = {},
-            resetChat = {}
+            resetChat = {},
+            logout = {}
         )
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.plantpal.screens.chat_interface.ChatInterfaceContent
 import com.example.plantpal.screens.sign_in.SignInScreen
 import com.example.plantpal.screens.chat_interface.ChatInterfaceScreen
 import com.example.plantpal.ui.theme.PlantPalTheme
@@ -53,22 +54,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     var isSignedIn by remember { mutableStateOf(auth.currentUser != null) }
                     if (isSignedIn) {
-                        // State to hold the response from the Firebase Function
-                        var greetingMessage by remember { mutableStateOf("") }
-                        // LaunchedEffect will run the coroutine when the composable enters the composition
-                        LaunchedEffect(Unit) {
-                            greetingMessage = try {
-                                plantPalChat(message = "Will you tell me what the moisture is reading on my sensor?")
-
-                            } catch (e: Exception) {
-                                "Error: ${e.message}"
-                            }
-                        }
-
-                        Greeting(message = greetingMessage)
-                    } else {
                         ChatInterfaceScreen()
-                        //SignInScreen(openAndPopUp = { _, _ -> isSignedIn = true })
+                    } else {
+                        SignInScreen(openAndPopUp = { _, _ -> isSignedIn = true })
                     }
                 }
             }
@@ -82,14 +70,14 @@ class MainActivity : ComponentActivity() {
             Log.d("MainActivity", "User ID: ${auth.currentUser?.uid}")
             Log.d("MainActivity", "User email: ${auth.currentUser?.email}")
             Log.d("MainActivity", "Signing user out")
-            auth.signOut()
+            //auth.signOut()
         }
     }
 
     private fun configFirebaseServices() {
         if(BuildConfig.DEBUG){
-            Firebase.auth.useEmulator(LOCALHOST, AUTH_PORT)
-            Firebase.functions.useEmulator(LOCALHOST, FIREBASE_FUNCTIONS_PORT)
+            //Firebase.auth.useEmulator(LOCALHOST, AUTH_PORT)
+            //Firebase.functions.useEmulator(LOCALHOST, FIREBASE_FUNCTIONS_PORT)
         }
     }
 
@@ -163,6 +151,6 @@ fun Greeting(message: String, modifier: Modifier = Modifier) {
 @Composable
 fun DefaultPreview() {
     PlantPalTheme(dynamicColor = false) {
-        Greeting("Hello from Firebase Functions (Python)!")
+        ChatInterfaceScreen()
     }
 }
