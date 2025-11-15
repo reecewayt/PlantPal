@@ -36,7 +36,7 @@ class AccountServiceImpl @Inject constructor() : AccountService {
     }
 
     override suspend fun signIn(email: String, password: String) {
-        Firebase.auth.signInWithEmailAndPassword(email, password).await()
+        Firebase.auth.signInWithEmailAndPassword(email.trim(), password.trim()).await()
     }
 
     override suspend fun signUp(email: String, password: String) {
@@ -45,7 +45,7 @@ class AccountServiceImpl @Inject constructor() : AccountService {
         throw NotImplementedError("Account creation is not yet implemented")
     }
 
-    override suspend fun signOut() {
+    override fun signOut() {
         Firebase.auth.signOut()
     }
 

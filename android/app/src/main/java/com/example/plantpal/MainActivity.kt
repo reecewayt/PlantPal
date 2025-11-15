@@ -1,7 +1,6 @@
 package com.example.plantpal
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.plantpal.screens.chat_interface.ChatInterfaceContent
 import com.example.plantpal.screens.sign_in.SignInScreen
 import com.example.plantpal.screens.chat_interface.ChatInterfaceScreen
 import com.example.plantpal.ui.theme.PlantPalTheme
@@ -32,18 +30,33 @@ import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.functions
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import com.example.plantpal.model.service.AccountService // Import the interface
 
+/*
+import com.example.plantpal.screens.chat_interface.ChatInterfaceContent
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.layout.FirstBaseline
+import android.util.Log
+*/
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /*
     private lateinit var functions: FirebaseFunctions
     private lateinit var auth: FirebaseAuth
+    */
+    @Inject
+    lateinit var accountService: AccountService
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        /*
         functions = Firebase.functions
         auth = Firebase.auth
-        configFirebaseServices()
+        */
+        super.onCreate(savedInstanceState)
+        //configFirebaseServices()
 
         setContent {
             PlantPalTheme(dynamicColor = false) {
@@ -52,17 +65,26 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var isSignedIn by remember { mutableStateOf(auth.currentUser != null) }
-                    if (isSignedIn) {
+                    //var isSignedIn by remember { mutableStateOf(auth.currentUser != null) }
+                    val isSignedIn by accountService.currentUser.collectAsState(initial = accountService.hasUser())
+                    if (isSignedIn != null) {
                         ChatInterfaceScreen()
                     } else {
-                        SignInScreen(openAndPopUp = { _, _ -> isSignedIn = true })
+                        SignInScreen(openAndPopUp = { _, _ -> })
                     }
                 }
             }
         }
     }
 
+    private fun configFirebaseServices() {
+        if(BuildConfig.DEBUG){
+            Firebase.auth.useEmulator(LOCALHOST, AUTH_PORT)
+            Firebase.functions.useEmulator(LOCALHOST, FIREBASE_FUNCTIONS_PORT)
+        }
+    }
+
+/*
     override fun onStart() {
         super.onStart()
         if (auth.currentUser != null) {
@@ -70,17 +92,9 @@ class MainActivity : ComponentActivity() {
             Log.d("MainActivity", "User ID: ${auth.currentUser?.uid}")
             Log.d("MainActivity", "User email: ${auth.currentUser?.email}")
             Log.d("MainActivity", "Signing user out")
-            //auth.signOut()
+            auth.signOut()
         }
     }
-
-    private fun configFirebaseServices() {
-        if(BuildConfig.DEBUG){
-            //Firebase.auth.useEmulator(LOCALHOST, AUTH_PORT)
-            //Firebase.functions.useEmulator(LOCALHOST, FIREBASE_FUNCTIONS_PORT)
-        }
-    }
-
 
     // Change this to a suspend function
     @Suppress("UNCHECKED_CAST")
@@ -117,7 +131,7 @@ class MainActivity : ComponentActivity() {
             val success = resultMap?.get("success") as? Boolean ?: false
 
             return if (success) {
-                resultMap?.get("response") as? String ?: "No response received"
+                resultMap.get("response") as? String ?: "No response received"
             } else {
                 "Error: Failed to get response from PlantPal"
             }
@@ -145,6 +159,8 @@ fun Greeting(message: String, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyLarge
         )
     }
+*/
+
 }
 
 @Preview(showBackground = true)

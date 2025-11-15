@@ -46,7 +46,11 @@ import kotlinx.coroutines.launch
 data class ChatMessage(
     val text: String,
     val sender: Sender
-)
+) {
+    init {
+        require(sender  == Sender.USER || sender == Sender.AI) {"Sender must be USER or AI"}
+    }
+}
 
 enum class Sender {
     USER, AI
@@ -68,6 +72,7 @@ fun ChatInterfaceScreen(
         messages = messages,
         userMessage = userMessage,
         isToggled = isToggled,
+        chatThreadID = chatThreadID,
         updateUserMessage = viewModel::updateUserMessage,
         queryFB = viewModel::queryFB,
         toggleSettings = viewModel::toggleSettings,
@@ -84,15 +89,16 @@ fun ChatInterfaceContent(
     messages: List<ChatMessage>,
     userMessage: String,
     isToggled: Boolean,
+    chatThreadID: String,
     updateUserMessage: (String) -> Unit,
     queryFB: suspend () -> Unit,
     toggleSettings: () -> Unit,
     resetChat: () -> Unit,
-    logout: () -> Unit
+    logout: suspend () -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -124,6 +130,7 @@ fun ChatInterfaceContent(
             },
             bottomBar = {
                 UserInputBar(
+                    modifier = Modifier,
                     currentText = userMessage,
                     onTextChanged = { updateUserMessage(it) },
                     onSendClicked = {
@@ -146,15 +153,26 @@ fun ChatInterfaceContent(
                 reverseLayout = true // Important for chat UIs
             ) {
                 items(messages.reversed()) { message ->
-                    MessageBubble(message = message)
+                    MessageBubble(
+                        modifier = Modifier,
+                        message = message
+                    )
                 }
             }
         }
 
         if (isToggled) {
             ModalBottomSheet(
-                onDismissRequest = { toggleSettings() },
+                modifier = Modifier.fillMaxSize(),
+                onDismissRequest = { toggleSettings() }
             ) {
+                // Chat ID Display
+                Text(
+                    text = "Chat Thread ID: $chatThreadID",
+                    modifier = Modifier
+                        .padding(14.dp)
+                        .fillMaxWidth()
+                )
                 // Reset Chat
                 Button(
                     onClick = {
@@ -169,7 +187,11 @@ fun ChatInterfaceContent(
                 }
                 // Logout Button
                 Button(
-                    onClick = { logout() },
+                    onClick = {
+                        scope.launch{
+                            logout()
+                        }
+                    },
                     modifier = Modifier
                         .padding(16.dp)
                         .fillMaxWidth(),
@@ -184,12 +206,13 @@ fun ChatInterfaceContent(
 // 3. The input field and send button at the bottom
 @Composable
 fun UserInputBar(
+    modifier: Modifier,
     currentText: String,
     onTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -212,12 +235,15 @@ fun UserInputBar(
 
 // 4. The composable for a single chat bubble
 @Composable
-fun MessageBubble(message: ChatMessage) {
+fun MessageBubble(
+    modifier: Modifier,
+    message: ChatMessage
+) {
     val isUserMessage = message.sender == Sender.USER
 
     // Use a Box to align the message bubble to the start or end
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = if (isUserMessage) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         Card(
@@ -251,6 +277,7 @@ fun ChatInterfacePreview() {
             messages = listOf(ChatMessage("Test", Sender.AI)),
             userMessage = "",
             isToggled = false,
+            chatThreadID = "Test123",
             updateUserMessage = {},
             queryFB = {},
             toggleSettings = {},
