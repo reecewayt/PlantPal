@@ -12,6 +12,6 @@ interface AccountService {
     fun hasUser(): Boolean
     suspend fun signIn(email: String, password: String)
     suspend fun signUp(email: String, password: String)
-    suspend fun signOut()
+    fun signOut()
     suspend fun deleteAccount()
 }
