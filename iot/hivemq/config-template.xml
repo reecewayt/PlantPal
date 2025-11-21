@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<hivemq-google-cloud-pubsub-extension xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                      xsi:noNamespaceSchemaLocation="config.xsd">
+
+    <pubsub-connections>
+        <pubsub-connection>
+            <id>connection01</id>
+            <google-cloud-project-id>glcoud-proj-name</google-cloud-project-id>
+            <authentication>
+                <service-account>
+                    <file-path>path/to/your/service-account-file.json</file-path>
+                </service-account>
+            </authentication>
+        </pubsub-connection>
+    </pubsub-connections>
+
+    <mqtt-to-pubsub-mappings>
+        <mqtt-to-pubsub-mapping>
+            <id>mapping-01</id>
+            <pubsub-connection>connection01</pubsub-connection>
+            <mqtt-topic-filters>
+                <mqtt-topic-filter>plantpal/data/moisture</mqtt-topic-filter>
+            </mqtt-topic-filters>
+            <pubsub-topics>
+                <pubsub-topic>
+                    <name>data-moisture</name>
+                </pubsub-topic>
+            </pubsub-topics>
+            <pubsub-attributes>
+                <pubsub-attribute>
+                    <key>mqtt_topic</key>
+                    <mqtt-topic/>
+                </pubsub-attribute>
+                <pubsub-attribute>
+                    <key>encoding</key>
+                    <value>json</value>
+                </pubsub-attribute>
+                <pubsub-attribute>
+                    <key>schema</key>
+                    <value>moisture-data.json</value>
+                </pubsub-attribute>
+            </pubsub-attributes>
+        </mqtt-to-pubsub-mapping>
+    </mqtt-to-pubsub-mappings>
+
+    <pubsub-to-mqtt-mappings>
+        <pubsub-to-mqtt-mapping>
+            <id>mapping-02</id>
+            <pubsub-connection>connection01</pubsub-connection>
+            <mqtt-topics>
+                <mqtt-topic>plantpal/request_soil</mqtt-topic>
+            </mqtt-topics>
+            <pubsub-subscriptions>
+                <pubsub-subscription>
+                    <name>request-soil-sub</name>
+                </pubsub-subscription>
+            </pubsub-subscriptions>
+        </pubsub-to-mqtt-mapping>
+
+        <pubsub-to-mqtt-mapping>
+            <id>mapping-03</id>
+            <pubsub-connection>connection01</pubsub-connection>
+            <mqtt-topics>
+                <mqtt-topic>plantpal/request_water</mqtt-topic>
+            </mqtt-topics>
+            <pubsub-subscriptions>
+                <pubsub-subscription>
+                    <name>request-water-sub</name>
+                </pubsub-subscription>
+            </pubsub-subscriptions>
+        </pubsub-to-mqtt-mapping>
+        <!-- Add more pubsub-to-mqtt-mapping entries as needed here-->
+    </pubsub-to-mqtt-mappings>
+
+
+
+</hivemq-google-cloud-pubsub-extension>
