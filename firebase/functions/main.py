@@ -46,13 +46,20 @@ def plantpal_chat(req: https_fn.CallableRequest) -> any:
     """
     PlantPal AI Chat Function
     Handles conversation with the LangChain agent
+
+    Request data:
+        - message: User's chat message (required)
+        - thread_id: Conversation thread identifier (required for persistence)
+        - use_history: Boolean, if True loads conversation history from
+                      LangSmith (default: False)
     """
     print("--- PlantPal Chat Function Invoked ---")
     print(f"Request data: {req.data}")
 
     # Extract message from request
     message = req.data.get("message")
-    thread_id = req.data.get("thread_id")  # Optional user identifier
+    thread_id = req.data.get("thread_id")  # User/conversation identifier
+    existing_thread = req.data.get("existing_thread", False)  # Load history
 
     if not message:
         raise https_fn.HttpsError(
@@ -60,14 +67,26 @@ def plantpal_chat(req: https_fn.CallableRequest) -> any:
             message="No message provided in the data payload."
         )
 
+    if not thread_id:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message="No thread_id provided. Required for conversation tracking."
+        )
+
     try:
         # Get the agent instance
-        agent = get_agent(thread_id=thread_id)
+        # If existing_thread=True, agent loads past conversation from LangSmith
+        # This enables long-running chats across Firebase function invocations
+        agent = get_agent(
+            thread_id=thread_id,
+            existing_thread=existing_thread
+        )
         response = agent.chat(message)
 
         return {
             "response": response,
-            "success": True
+            "success": True,
+            "thread_id": thread_id  # Echo back for client tracking
         }
 
     except Exception as e:
