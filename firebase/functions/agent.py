@@ -73,7 +73,7 @@ class MaxOutputTokens(enum.Enum):
 def get_thread_history(thread_id: str, project_name: str) -> List[BaseMessage]:
     """
     Retrieve conversation history for a thread from LangSmith.
-    Simple approach: get runs, sort by time, return messages.
+    Reconstructs conversation from LLM runs.
 
     Args:
         thread_id: Unique identifier for the conversation thread
@@ -81,6 +81,8 @@ def get_thread_history(thread_id: str, project_name: str) -> List[BaseMessage]:
 
     Returns:
         List of BaseMessage objects representing conversation history
+        (HumanMessage and AIMessage only, system messages excluded as will be add by
+        agent create method)
     """
 
     # Filter runs by thread_id metadata
@@ -89,7 +91,7 @@ def get_thread_history(thread_id: str, project_name: str) -> List[BaseMessage]:
         f'"thread_id"]), eq(metadata_value, "{thread_id}"))'
     )
 
-    # Get all runs for this thread (chain type for agent runs)
+    # Get all runs for this thread (llm type for model calls)
     runs = [
         r for r in langsmith_client.list_runs(
             project_name=project_name,
@@ -102,29 +104,43 @@ def get_thread_history(thread_id: str, project_name: str) -> List[BaseMessage]:
         print(f"No history found for thread: {thread_id}")
         return []
 
-    # Sort by start time (most recent last per example)
-    runs = sorted(runs, key=lambda run: run.start_time, reverse=True)
+    # Sort by start time (oldest first to maintain conversation order)
+    runs = sorted(runs, key=lambda run: run.start_time)
 
     print(f"Found {len(runs)} runs for thread: {thread_id}")
 
-    # Get latest run like in the example
-    latest_run = runs[0]
+    # Build message history from runs
+    messages: List[BaseMessage] = []
 
-    # Debug: Print what we have
-    print(f"\nLatest run inputs: {latest_run.inputs}")
-    print(f"Latest run outputs: {latest_run.outputs}")
+    for run in runs:
+        if not run.inputs or not run.outputs:
+            continue
 
-    # Follow the example pattern exactly
-    if latest_run.inputs and latest_run.outputs:
-        input_msgs = latest_run.inputs['messages']
-        output_msg = latest_run.outputs['choices'][0]['message']
-        print(input_msgs)
-        print(output_msg)
-        all_messages = input_msgs + [output_msg]
-        print(f"Returning {len(all_messages)} messages")
-        return all_messages
+        # Extract input messages (skip system message)
+        input_messages = run.inputs.get('messages', [[]])[0]
+        for msg in input_messages:
+            msg_type = msg['kwargs'].get('type')
+            content = msg['kwargs'].get('content', '')
 
-    return []
+            # Only add human messages (system is handled by agent prompt)
+            if msg_type == 'human':
+                messages.append(HumanMessage(content=content))
+
+        # Extract AI response from outputs
+        generations = run.outputs.get('generations', [[]])
+        if generations and generations[0]:
+            ai_response = generations[0][0].get('message', {})
+            ai_content = ai_response.get('kwargs', {}).get('content', '')
+            if ai_content:
+                messages.append(AIMessage(content=ai_content))
+
+    # Limit to most recent 25 messages to prevent excessive context
+    if len(messages) > 25:
+        messages = messages[-25:]
+        print("Truncated history to most recent 25 messages")
+
+    print(f"Reconstructed {len(messages)} messages from history")
+    return messages
 
 
 # Middleware configuration
@@ -202,20 +218,10 @@ class PlantPalAgent:
         # Load existing conversation history from LangSmith if enabled
         if self.existing_thread:
             print(f"Loading conversation history for thread: {thread_id}")
-
-            history_messages = get_thread_history(
+            self.chat_history = get_thread_history(
                 thread_id=thread_id,
                 project_name=os.getenv("LANGSMITH_PROJECT")
-                )
-            if history_messages:
-                self.chat_history = [
-                    HumanMessage(content=msg['content']) if msg['role'] == 'user'
-                    else AIMessage(content=msg['content'])
-                    for msg in history_messages
-                ]
-            else:
-                self.chat_history = []
-
+            )
         else:
             self.chat_history = []
         # Create summarization middleware to manage long conversations
@@ -233,7 +239,6 @@ class PlantPalAgent:
                             checkpointer=self.memory
                             )
 
-
     def _setup_tools(self) -> List[BaseTool]:
         """Setup and return list of available tools"""
         tools: List[BaseTool] = []
@@ -243,7 +248,11 @@ class PlantPalAgent:
         tavily_tool = TavilySearch(max_results=3)
         tools.append(tavily_tool)
 
-        iot_tools_module = __import__('tools.iot_tools', fromlist=['get_moisture_data', 'get_sensor_id', 'control_irrigation'])
+        iot_tools_module = __import__(
+            'tools.iot_tools',
+            fromlist=['get_moisture_data', 'get_sensor_id',
+                      'control_irrigation']
+        )
         tools.append(iot_tools_module.get_moisture_data)
         tools.append(iot_tools_module.get_sensor_id)
         tools.append(iot_tools_module.control_irrigation)
@@ -261,8 +270,16 @@ class PlantPalAgent:
             Agent's response as string
         """
         try:
+            # On first call with existing thread, prepend chat history
+            if self.chat_history:
+                messages = self.chat_history + [HumanMessage(content=message)]
+                # Clear history so we don't prepend it again
+                self.chat_history = []
+            else:
+                messages = [HumanMessage(content=message)]
+
             response = self.agent.invoke({
-                "messages": [("user", message)]
+                "messages": messages
             }, config=self.config)
 
             return response["messages"][-1].content
@@ -284,6 +301,7 @@ class PlantPalAgent:
 
 # Global agent instance - will be initialized when needed
 _agent_instance: Optional[PlantPalAgent] = None
+_current_thread_id: Optional[str] = None
 
 
 def get_agent(
@@ -292,28 +310,34 @@ def get_agent(
 ) -> PlantPalAgent:
     """
     Get or create the global agent instance
-    This ensures we reuse the same agent across function calls
+    Recreates agent if thread_id changes to ensure proper isolation
 
     Args:
         thread_id: Unique identifier for conversation thread
         existing_thread: If True, load conversation history from
                         LangSmith traces for long-running chats
     """
-    global _agent_instance
+    global _agent_instance, _current_thread_id
 
-    if _agent_instance is None:
+    # Recreate agent if thread_id changed or doesn't exist
+    if _agent_instance is None or _current_thread_id != thread_id:
+        print(f"Creating new agent for thread: {thread_id}")
         _agent_instance = PlantPalAgent(
             thread_id=thread_id,
             existing_thread=existing_thread
         )
+        _current_thread_id = thread_id
+    else:
+        print(f"Reusing existing agent for thread: {thread_id}")
 
     return _agent_instance
 
 
 def reset_agent():
-    """Reset the global agent instance"""
-    global _agent_instance
+    """Reset the global agent instance and thread tracking"""
+    global _agent_instance, _current_thread_id
     _agent_instance = None
+    _current_thread_id = None
     print("Agent instance reset")
 
 
