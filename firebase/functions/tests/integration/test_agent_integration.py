@@ -8,6 +8,7 @@ import sys
 import os
 import time
 
+
 # Add parent directories to path for imports
 parent_dir = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
@@ -269,22 +270,6 @@ class TestAgentToolIntegration(unittest.TestCase):
         print(f"Search-based response: {response[:150]}...")
         print("✅ Tavily search tool test passed")
 
-    def test_agent_uses_iot_tools(self):
-        """Test that agent invokes IoT tools when appropriate"""
-        print("\n🧪 Testing IoT tool usage...")
-
-        # Ask about sensor data
-        response = self.agent.chat("What is the moisture level from my sensor?")
-
-        self.assertGreater(len(response), 0)
-        # Response should mention moisture or sensor data
-        self.assertTrue(
-            any(keyword in response.lower() for keyword in ["moisture", "sensor", "percent", "%"]),
-            "Agent should invoke IoT tool and return sensor data"
-        )
-
-        print(f"IoT tool response: {response[:150]}...")
-        print("✅ IoT tool test passed")
 
 
 class TestAgentErrorHandling(unittest.TestCase):

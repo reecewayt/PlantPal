@@ -5,6 +5,7 @@ Sets up LangChain agent with conversation memory and tools
 import enum
 import os
 from typing import List, Optional, Any, Dict
+from dotenv import load_dotenv
 
 from langchain.tools import BaseTool
 from langchain_tavily import TavilySearch
@@ -19,6 +20,7 @@ import langsmith as ls
 
 
 # For tracking of Agent calls and langsmith client
+load_dotenv()
 os.environ["LANGSMITH_TRACING"] = "true"
 langsmith_client = Client()
 
@@ -250,11 +252,11 @@ class PlantPalAgent:
 
         iot_tools_module = __import__(
             'tools.iot_tools',
-            fromlist=['get_moisture_data', 'get_sensor_id',
+            fromlist=['get_moisture_data', 'get_system_status',
                       'control_irrigation']
         )
         tools.append(iot_tools_module.get_moisture_data)
-        tools.append(iot_tools_module.get_sensor_id)
+        tools.append(iot_tools_module.get_system_status)
         tools.append(iot_tools_module.control_irrigation)
 
         return tools
