@@ -36,15 +36,19 @@ if { [llength $bd_files] > 0 } {
     add_files -norecurse $bd_files
 }
 
+# Add custom IP repository
+set ip_repo_path [file normalize ${src_dir}/ip]
+if { [file exists $ip_repo_path] } {
+    set_property ip_repo_paths $ip_repo_path [current_project]
+    update_ip_catalog
+}
+
 # 4. Add BOTH constraint files
 set constr_nexys4 [glob -nocomplain ${src_dir}/constraints/nexys4.xdc]
 if { [llength $constr_nexys4] > 0 } {
     add_files -fileset constrs_1 $constr_nexys4
     set_property USED_IN {synthesis implementation} [get_files $constr_nexys4]
 }
-
-# Generate the HDL wrapper for the block design
-make_wrapper -files [get_files *.bd] -top -import_files
 
 set constr_nexys7 [glob -nocomplain ${src_dir}/constraints/nexys7.xdc]
 if { [llength $constr_nexys7] > 0 } {
