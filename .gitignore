@@ -2,7 +2,7 @@
 build
 
 # Ignore generated IP products
-**/ip/
+fpga/vivado_src/bd/**/ip
 
 # Ignore user-specific UI state
 **/ui/
