@@ -8,7 +8,7 @@
 #include "config.h"
 #include "secrets.h"
 #include "mqtt_service.h"
-#include "../include/uart_protocol.h"
+#include "../include/plant_pal_uart_protocol.h"
 
 
 const String TAG = "MAIN";
