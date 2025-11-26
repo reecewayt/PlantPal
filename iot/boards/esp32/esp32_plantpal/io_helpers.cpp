@@ -1,4 +1,6 @@
 #include "io_helpers.h"
+#include "config.h"
+#include <cstdint>
 
 const String TAG = "MQTT_SERVICE";
 
@@ -127,7 +129,8 @@ bool receiveUartResponse(Stream &uart, uint8_t &command, uint8_t* payload, uint8
         }
         delay(1);
     }
-    command = uart.read();
+    DEBUG_LOG("IO Helper", "Received command byte");
+    command = (uint8_t)uart.read();
 
     // Wait for length byte
     startTime = millis();
@@ -137,7 +140,7 @@ bool receiveUartResponse(Stream &uart, uint8_t &command, uint8_t* payload, uint8
         }
         delay(1);
     }
-    length = uart.read();
+    length = (uint8_t)uart.read();
 
     // Read payload if length > 0
     if (length > 0) {
@@ -150,7 +153,7 @@ bool receiveUartResponse(Stream &uart, uint8_t &command, uint8_t* payload, uint8
 
         while (bytesRead < length) {
             if (uart.available()) {
-                payload[bytesRead++] = uart.read();
+                payload[bytesRead++] = (uint8_t)uart.read();
                 startTime = millis();  // Reset timeout on each byte
             }
 
