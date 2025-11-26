@@ -1,8 +1,8 @@
-#include "mqtt_service.h"
+#include "io_helpers.h"
 
 const String TAG = "MQTT_SERVICE";
 
-void messageReceived(String &topic, String &payload, HardwareSerial &uart, MQTTClient &mqttClient) {
+void messageReceived(String &topic, String &payload, Stream &uart, MQTTClient &mqttClient) {
     if (topic == SUB_MOISTURE_TOPIC) {
         DEBUG_LOG(TAG, "Received moisture sensor reading request");
 
@@ -98,7 +98,7 @@ String formatMoistureTopicPayload(double moisturePercent, unsigned long timestam
  * @brief Send UART command to FPGA
  * Frame format: [COMMAND][LENGTH][PAYLOAD...]
  */
-bool sendUartCommand(HardwareSerial &uart, uint8_t command, const uint8_t* payload, uint8_t length) {
+bool sendUartCommand(Stream &uart, uint8_t command, const uint8_t* payload, uint8_t length) {
     if (length > UART_MAX_PAYLOAD_SIZE) {
         return false;
     }
@@ -117,7 +117,7 @@ bool sendUartCommand(HardwareSerial &uart, uint8_t command, const uint8_t* paylo
  * @brief Receive UART response from FPGA
  * Frame format: [COMMAND][LENGTH][PAYLOAD...]
  */
-bool receiveUartResponse(HardwareSerial &uart, uint8_t &command, uint8_t* payload, uint8_t &length, unsigned long timeout_ms) {
+bool receiveUartResponse(Stream &uart, uint8_t &command, uint8_t* payload, uint8_t &length, unsigned long timeout_ms) {
     unsigned long startTime = millis();
 
     // Wait for command byte

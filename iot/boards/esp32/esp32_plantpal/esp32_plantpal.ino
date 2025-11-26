@@ -7,8 +7,8 @@
 #include <MQTT.h>
 #include "config.h"
 #include "secrets.h"
-#include "mqtt_service.h"
-#include "../include/plant_pal_uart_protocol.h"
+#include "io_helpers.h"
+#include "../../../../common/plant_pal_uart_protocol.h"
 
 
 const String TAG = "MAIN";
@@ -16,12 +16,14 @@ const String TAG = "MAIN";
 WiFiClient net;
 MQTTClient client;
 
-// UART Serial (Serial2 on ESP32)
-HardwareSerial uartSerial(2);
-
 // Status check interval (60 seconds)
 const unsigned long STATUS_CHECK_INTERVAL_MS = 60000UL;
 unsigned long _lastStatusCheckMs = 0;
+
+// MQTT callback wrapper
+void onMqttMessage(String &topic, String &payload) {
+  messageReceived(topic, payload, Serial1, client);
+}
 
 void connect() {
   DEBUG_LOG(TAG, "Checking WiFi...");
@@ -54,12 +56,12 @@ void setup() {
   DEBUG_LOG(TAG, "Config:");
   DEBUG_LOG(TAG, String("  WiFi SSID: ") + WIFI_SSID);
   DEBUG_LOG(TAG, String("  MQTT Broker: ") + MQTT_BROKER_HOST + ":" + String(MQTT_BROKER_PORT));
-  DEBUG_LOG(TAG, String("  UART: RX=") + String(UART_RX_PIN) + " TX=" + String(UART_TX_PIN) + " Baud=" + String(UART_BAUD_RATE));
+  DEBUG_LOG(TAG, String("  UART: Serial1 Baud=") + String(UART_BAUD_RATE));
   DEBUG_LOG(TAG, "");
 
   // Initialize UART for FPGA communication
-  uartSerial.begin(UART_BAUD_RATE, SERIAL_8N1, UART_RX_PIN, UART_TX_PIN);
-  DEBUG_LOG(TAG, "UART initialized");
+  Serial1.begin(UART_BAUD_RATE);
+  DEBUG_LOG(TAG, "Serial1 initialized");
 
   // Connect to WiFi
   DEBUG_LOG(TAG, String("Connecting to WiFi: ") + WIFI_SSID);
@@ -67,9 +69,7 @@ void setup() {
 
   // Initialize MQTT client
   client.begin(MQTT_BROKER_HOST, MQTT_BROKER_PORT, net);
-  client.onMessage([](String &topic, String &payload) {
-    messageReceived(topic, payload, uartSerial, client);
-  });
+  client.onMessage(onMqttMessage);
 
   connect();
 
@@ -94,14 +94,14 @@ void loop() {
       DEBUG_LOG(TAG, "Requesting FPGA status...");
 
       // Send status request to FPGA
-      sendUartCommand(uartSerial, CMD_STATUS_REQUEST, nullptr, 0);
+      sendUartCommand(Serial1, CMD_STATUS_REQUEST, nullptr, 0);
 
       // Wait for response
       uint8_t responseCmd;
       uint8_t responsePayload[UART_MAX_PAYLOAD_SIZE];
       uint8_t responseLen;
 
-      if (receiveUartResponse(uartSerial, responseCmd, responsePayload, responseLen, 2000)) {
+      if (receiveUartResponse(Serial1, responseCmd, responsePayload, responseLen, 2000)) {
         if (responseCmd == RESP_STATUS_OK) {
           DEBUG_LOG(TAG, "FPGA status: OK");
 
