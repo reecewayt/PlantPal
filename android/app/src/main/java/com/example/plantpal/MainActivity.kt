@@ -1,7 +1,6 @@
 package com.example.plantpal
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.plantpal.screens.sign_in.SignInScreen
+import com.example.plantpal.screens.chat_interface.ChatInterfaceScreen
 import com.example.plantpal.ui.theme.PlantPalTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -30,18 +30,33 @@ import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.functions
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import com.example.plantpal.model.service.AccountService // Import the interface
 
+/*
+import com.example.plantpal.screens.chat_interface.ChatInterfaceContent
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.layout.FirstBaseline
+import android.util.Log
+*/
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /*
     private lateinit var functions: FirebaseFunctions
     private lateinit var auth: FirebaseAuth
+    */
+    @Inject
+    lateinit var accountService: AccountService
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        /*
         functions = Firebase.functions
         auth = Firebase.auth
-        configFirebaseServices()
+        */
+        super.onCreate(savedInstanceState)
+        //configFirebaseServices()
 
         setContent {
             PlantPalTheme(dynamicColor = false) {
@@ -50,37 +65,15 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var isSignedIn by remember { mutableStateOf(auth.currentUser != null) }
-                    if (isSignedIn) {
-                        // State to hold the response from the Firebase Function
-                        var greetingMessage by remember { mutableStateOf("") }
-                        // LaunchedEffect will run the coroutine when the composable enters the composition
-                        LaunchedEffect(Unit) {
-                            greetingMessage = try {
-                                plantPalChat(message = "Will you tell me what the moisture is reading on my sensor?")
-
-                            } catch (e: Exception) {
-                                "Error: ${e.message}"
-                            }
-                        }
-
-                        Greeting(message = greetingMessage)
+                    //var isSignedIn by remember { mutableStateOf(auth.currentUser != null) }
+                    val isSignedIn by accountService.currentUser.collectAsState(initial = accountService.hasUser())
+                    if (isSignedIn != null) {
+                        ChatInterfaceScreen()
                     } else {
-                        SignInScreen(openAndPopUp = { _, _ -> isSignedIn = true })
+                        SignInScreen(openAndPopUp = { _, _ -> })
                     }
                 }
             }
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        if (auth.currentUser != null) {
-            Log.d("MainActivity", "User is signed in")
-            Log.d("MainActivity", "User ID: ${auth.currentUser?.uid}")
-            Log.d("MainActivity", "User email: ${auth.currentUser?.email}")
-            Log.d("MainActivity", "Signing user out")
-            auth.signOut()
         }
     }
 
@@ -91,6 +84,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+/*
+    override fun onStart() {
+        super.onStart()
+        if (auth.currentUser != null) {
+            Log.d("MainActivity", "User is signed in")
+            Log.d("MainActivity", "User ID: ${auth.currentUser?.uid}")
+            Log.d("MainActivity", "User email: ${auth.currentUser?.email}")
+            Log.d("MainActivity", "Signing user out")
+            auth.signOut()
+        }
+    }
 
     // Change this to a suspend function
     @Suppress("UNCHECKED_CAST")
@@ -127,7 +131,7 @@ class MainActivity : ComponentActivity() {
             val success = resultMap?.get("success") as? Boolean ?: false
 
             return if (success) {
-                resultMap?.get("response") as? String ?: "No response received"
+                resultMap.get("response") as? String ?: "No response received"
             } else {
                 "Error: Failed to get response from PlantPal"
             }
@@ -155,12 +159,14 @@ fun Greeting(message: String, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyLarge
         )
     }
+*/
+
 }
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     PlantPalTheme(dynamicColor = false) {
-        Greeting("Hello from Firebase Functions (Python)!")
+        ChatInterfaceScreen()
     }
 }

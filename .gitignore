@@ -18,3 +18,5 @@ fpga/vivado_src/bd/**/*.v
 # Ignore generated XML files
 *.bxml
 
+.DS_Store
+secrets.h
