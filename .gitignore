@@ -20,3 +20,4 @@ fpga/vivado_src/bd/**/*.v
 
 .DS_Store
 secrets.h
+.vscode
