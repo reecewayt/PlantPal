@@ -4,11 +4,13 @@
 
 package com.example.plantpal.model.service.impl
 
+import android.util.Log
 import com.example.plantpal.model.service.AccountService
 import com.example.plantpal.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuthException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -35,8 +37,32 @@ class AccountServiceImpl @Inject constructor() : AccountService {
         return Firebase.auth.currentUser != null
     }
 
-    override suspend fun signIn(email: String, password: String) {
-        Firebase.auth.signInWithEmailAndPassword(email.trim(), password.trim()).await()
+    override suspend fun signIn(email: String, password: String): String? {
+        if (email.isEmpty() || password.isEmpty()) {
+            Log.e("AccountServiceImpl","Email or Password is Empty")
+            return "Email or Password is Empty"
+        }
+
+        return try {
+            // Use await() to make this call blocking within the coroutine.
+            Firebase.auth.signInWithEmailAndPassword(email.trim(), password.trim()).await()
+            Log.d("AccountServiceImpl", "User Credentials Verified Successfully.")
+            // If await() succeeds, it means sign-in was successful. Return null for success.
+            null
+        } catch (ex: FirebaseAuthException) {
+            // If await() fails, it throws an exception. We catch it here.
+            val errorCode = ex.errorCode
+            Log.e("AccountServiceImpl", "Firebase Auth Error. Code: $errorCode")
+            when (errorCode) {
+                "ERROR_INVALID_EMAIL" -> "Invalid email address."
+                "ERROR_INVALID_CREDENTIAL" -> "Invalid credentials."
+                else -> "An unexpected error occurred."
+            }
+        } catch (e: Exception) {
+            // Catch any other non-Firebase exceptions.
+            Log.e("AccountServiceImpl", "A non-Firebase exception occurred: ${e.message}")
+            "An unexpected error occurred."
+        }
     }
 
     override suspend fun signUp(email: String, password: String) {
