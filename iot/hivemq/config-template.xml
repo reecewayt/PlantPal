@@ -41,6 +41,29 @@
                 </pubsub-attribute>
             </pubsub-attributes>
         </mqtt-to-pubsub-mapping>
+
+        <mqtt-to-pubsub-mapping>
+            <id>mapping-04</id>
+            <pubsub-connection>connection01</pubsub-connection>
+            <mqtt-topic-filters>
+                <mqtt-topic-filter>plantpal/status</mqtt-topic-filter>
+            </mqtt-topic-filters>
+            <pubsub-topics>
+                <pubsub-topic>
+                    <name>system-status</name>
+                </pubsub-topic>
+            </pubsub-topics>
+            <pubsub-attributes>
+                <pubsub-attribute>
+                    <key>mqtt_topic</key>
+                    <mqtt-topic/>
+                </pubsub-attribute>
+                <pubsub-attribute>
+                    <key>encoding</key>
+                    <value>json</value>
+                </pubsub-attribute>
+            </pubsub-attributes>
+        </mqtt-to-pubsub-mapping>
     </mqtt-to-pubsub-mappings>
 
     <pubsub-to-mqtt-mappings>

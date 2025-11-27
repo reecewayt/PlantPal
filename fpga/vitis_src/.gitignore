@@ -1,0 +1,29 @@
+# Ignore build output directory
+/build
+/export
+
+# Ignore Vitis platform and generated files
+/platform
+/.rigel_lopper
+
+# Ignore Vitis IDE workspace metadata
+/_ide
+
+# Ignore object files and dependent files
+.o
+.d
+
+#Ignore logs folder and log files
+/logs
+.log
+
+#Ignore lock files
+.lock
+
+.bin
+.pdi
+.vitisWorkspace.json
+
+# Ignore vitis IDE components 
+app_component/
+.vscode/
