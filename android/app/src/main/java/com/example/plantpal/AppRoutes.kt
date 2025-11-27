@@ -1,9 +1,11 @@
 package com.example.plantpal
 
-const val CHAT_SCREEN = "ChatInterfaceScreen"       // TODO: Implement chat screen
-const val SIGN_IN_SCREEN = "SignInScreen"
-const val SIGN_UP_SCREEN = "SignUpScreen"
-const val SPLASH_SCREEN = "SplashScreen"   // TODO: Implement splash screen
+sealed class Screen(val route: String) {
+    object SignInRoute: Screen("SignInRoute")
+    object ChatRoute: Screen("ChatRoute")
+    object SignUpRoute: Screen("SignUpRoute") //TODO: Add SignUp Route
+    object SplashRoute: Screen("SplashRoute") //TODO: Add Splash Route
+}
 
 
 const val LOCALHOST = "10.0.2.2"
