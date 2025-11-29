@@ -1,6 +1,11 @@
 package com.example.plantpal.screens.chat_interface
 
 import android.util.Log
+import androidx.compose.animation.core.copy
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.text
+import com.example.plantpal.Screen
 import com.example.plantpal.model.service.AccountService
 import com.example.plantpal.screens.PlantPalAppViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,21 +16,28 @@ import javax.inject.Inject
 import com.google.firebase.Firebase
 import com.google.firebase.functions.functions
 import com.google.firebase.auth.auth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     val accountService: AccountService
-)
-: PlantPalAppViewModel() {
-    // State management: these 'remember' calls hold the state of our chat
-    val messages = MutableStateFlow(
+): PlantPalAppViewModel() {
+    private val _messages = MutableStateFlow(
         listOf(ChatMessage("Hello! How can I help you today?", Sender.AI))
     )
+    val messages = _messages
+
     val userMessage = MutableStateFlow("")
     val isToggled = MutableStateFlow(false)
+    val isChatting = MutableStateFlow(false)
+
+    val currentMessageLength = MutableStateFlow(0)
 
     val chatThreadID = MutableStateFlow("")
+    val isDeleting = MutableStateFlow(false)
 
     init {
         chatThreadID.value = UUID.randomUUID().toString()
@@ -36,47 +48,92 @@ class ChatViewModel @Inject constructor(
     }
 
     suspend fun queryFB() {
-        val waitMessage = ChatMessage("Thinking...", Sender.AI)
+        isChatting.value = true
         val incomingMessage = userMessage.value
 
-        // Clear input box when message is sent
+        // Clear input box immediately
         updateUserMessage("")
 
-        // Add user message to chat
-        addMessage(ChatMessage(incomingMessage, Sender.USER))
-        addMessage(waitMessage)
+        // 1. Add user message to chat. This will appear instantly.
+        _messages.value += ChatMessage(incomingMessage, Sender.USER)
 
-        // Add AI message to chat
-        val outputMessage: String = chat(incomingMessage, chatThreadID.value)
+        delay(1500)
 
-        // Delete wait message and add outputMessage
-        deleteMessage(waitMessage)
-        addMessage(ChatMessage(outputMessage, Sender.AI))
+        // 2. Add a placeholder for the AI's response.
+        val aiPlaceholder = ChatMessage("Thinking...", Sender.AI)
+        _messages.value += aiPlaceholder
+
+        // 3. Get the full response from the backend.
+        val fullResponse: String = chat(incomingMessage, chatThreadID.value)
+
+        // 4. Remove current text in placeholder
+        val currentList = _messages.value
+        val lastMessage = currentList.last()
+        _messages.value = currentList.dropLast(1) + lastMessage.copy(text = "")
+
+        // 5. Animate the full response into the placeholder and enable chat after animation is done.
+        animateMessage(fullResponse)
+        isChatting.value = false
+    }
+
+    /**
+     * Replaces the last message (the AI placeholder) with a character-by-character animation.
+     */
+    private suspend fun animateMessage(fullText: String) {
+        val characterDelay = 15L // milliseconds between each character
+
+        // Build the text one character at a time
+        fullText.forEach { char ->
+            // Get the current list, drop the last message, and add an updated version
+            val currentList = _messages.value
+            val lastMessage = currentList.last()
+            val updatedMessage = lastMessage.copy(text = lastMessage.text + char)
+
+            currentMessageLength.value = updatedMessage.text.length
+
+            _messages.value = currentList.dropLast(1) + updatedMessage
+            delay(characterDelay)
+        }
     }
 
     fun toggleSettings() {
         isToggled.value = !isToggled.value
     }
 
+    fun toggleDeleteAccPopup() {
+        isDeleting.value = !isDeleting.value
+    }
+
     fun resetChat() {
         // Clear previous chat logs
-        messages.value = listOf(ChatMessage("Hello! How can I help you today?", Sender.AI))
+        _messages.value = listOf(ChatMessage("Hello! How can I help you today?", Sender.AI))
         userMessage.value = ""
         chatThreadID.value = UUID.randomUUID().toString()
     }
 
-    fun logout() {
+    fun logout(openAndPopUp: (String, String) -> Unit) {
+        // 1. Perform all state updates and synchronous operations first.
         isToggled.value = false
-        resetChat()
         accountService.signOut()
+        resetChat()
+
+        // 2. Navigate away as the very last step.
+        openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
     }
 
-    private fun addMessage(message: ChatMessage) {
-        messages.value += message
-    }
+    fun deleteAndLeave(openAndPopUp: (String, String) -> Unit) {
+        launchCatching {
+            // 1. Perform the critical backend operation on a background thread.
+            accountService.deleteAccount()
 
-    private fun deleteMessage(message: ChatMessage) {
-        messages.value -= message
+            // 3. Update local state now that the background operation is complete.
+            isDeleting.value = false
+            isToggled.value = false
+            resetChat()
+
+            // 4. Navigate as the final action, now safely on the Main thread.
+            openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
+        }
     }
 
     private suspend fun chat(message: String, chatThreadId: String? = "abc_123"): String {
@@ -85,12 +142,10 @@ class ChatViewModel @Inject constructor(
             "thread_id" to chatThreadId
         )
 
-        if (Firebase.auth.currentUser != null) {
-            Log.d("ChatViewModel", "User ID: ${Firebase.auth.currentUser?.uid}")
-            Log.d("ChatViewModel", "User email: ${Firebase.auth.currentUser?.email}")
-            Log.d("ChatViewModel", "User details: ${Firebase.auth.currentUser?.metadata}")
-        } else {
-            Log.d("ChatViewModel", "User is not signed in")
+        if (Firebase.auth.currentUser == null) {
+            Log.d("ChatViewModel", "User is not signed in, using simulated response.")
+            delay(1000) // Simulate network delay
+            return "This is a simulated response because you are not signed in. The text will animate character by character."
         }
 
         try {
@@ -116,6 +171,3 @@ class ChatViewModel @Inject constructor(
         }
     }
 }
-
-
-
