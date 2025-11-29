@@ -2,6 +2,8 @@ package com.example.plantpal.screens.chat_interface
 
 import android.util.Log
 import androidx.compose.animation.core.copy
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.text
 import com.example.plantpal.Screen
 import com.example.plantpal.model.service.AccountService
@@ -14,7 +16,9 @@ import javax.inject.Inject
 import com.google.firebase.Firebase
 import com.google.firebase.functions.functions
 import com.google.firebase.auth.auth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 
 @HiltViewModel
@@ -33,6 +37,7 @@ class ChatViewModel @Inject constructor(
     val currentMessageLength = MutableStateFlow(0)
 
     val chatThreadID = MutableStateFlow("")
+    val isDeleting = MutableStateFlow(false)
 
     init {
         chatThreadID.value = UUID.randomUUID().toString()
@@ -95,6 +100,10 @@ class ChatViewModel @Inject constructor(
         isToggled.value = !isToggled.value
     }
 
+    fun toggleDeleteAccPopup() {
+        isDeleting.value = !isDeleting.value
+    }
+
     fun resetChat() {
         // Clear previous chat logs
         _messages.value = listOf(ChatMessage("Hello! How can I help you today?", Sender.AI))
@@ -103,10 +112,28 @@ class ChatViewModel @Inject constructor(
     }
 
     fun logout(openAndPopUp: (String, String) -> Unit) {
+        // 1. Perform all state updates and synchronous operations first.
         isToggled.value = false
-        resetChat()
         accountService.signOut()
+        resetChat()
+
+        // 2. Navigate away as the very last step.
         openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
+    }
+
+    fun deleteAndLeave(openAndPopUp: (String, String) -> Unit) {
+        launchCatching {
+            // 1. Perform the critical backend operation on a background thread.
+            accountService.deleteAccount()
+
+            // 3. Update local state now that the background operation is complete.
+            isDeleting.value = false
+            isToggled.value = false
+            resetChat()
+
+            // 4. Navigate as the final action, now safely on the Main thread.
+            openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
+        }
     }
 
     private suspend fun chat(message: String, chatThreadId: String? = "abc_123"): String {

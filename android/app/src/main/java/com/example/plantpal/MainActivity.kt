@@ -13,8 +13,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.example.plantpal.screens.sign_in.SignInScreen
-import com.example.plantpal.screens.chat_interface.ChatInterfaceScreen
 import com.example.plantpal.ui.theme.PlantPalTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -22,9 +20,14 @@ import com.google.firebase.functions.functions
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.runtime.remember
 import javax.inject.Inject
+
 import com.example.plantpal.model.service.AccountService
+import com.example.plantpal.screens.chat_interface.ChatInterfaceScreen
 import com.example.plantpal.screens.chat_interface.ChatViewModel
+import com.example.plantpal.screens.sign_in.SignInScreen
 import com.example.plantpal.screens.sign_in.SignInViewModel
+import com.example.plantpal.screens.sign_up.SignUpScreen
+import com.example.plantpal.screens.sign_up.SignUpViewModel
 
 
 const val SHARED_GRAPH_ROUTE = "shared_graph"
@@ -86,6 +89,20 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         viewModel = chatVM
+                    )
+                }
+                composable(Screen.SignUpRoute.route) { backStackEntry ->
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry(SHARED_GRAPH_ROUTE)
+                    }
+                    val signUpVM: SignUpViewModel = hiltViewModel(parentEntry)
+                    SignUpScreen(
+                        openAndPopUp = { route, popUp ->
+                            navController.navigate(route) {
+                                popUpTo(popUp) { inclusive = true }
+                            }
+                        },
+                        viewModel = signUpVM
                     )
                 }
             }

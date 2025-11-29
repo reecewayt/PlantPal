@@ -31,6 +31,7 @@ class SignInViewModel @Inject constructor(
         signInStatus.value = ""
     }
 
+
     fun onSignInClick(openAndPopUp: (String, String) -> Unit){
         launchCatching {
             // Start Loading Composable
@@ -50,16 +51,16 @@ class SignInViewModel @Inject constructor(
             if (status == null) {
                 signInStatus.value = "Success"
                 delay(3000)
-                signInStatus.value = ""
                 openAndPopUp(Screen.ChatRoute.route, Screen.SignInRoute.route)
+                signInStatus.value = ""
             } else {
                 signInStatus.value = status
             }
 
         }
     }
-// TODO: SignUp flow needs to be defined once implemented
-//    fun onSignUpClick(openAndPopUp: (String, String) -> Unit) {
-//        openAndPopUp(SIGN_UP_SCREEN, SIGN_IN_SCREEN)
-//    }
+
+    fun onSignUpClick(openAndPopUp: (String, String) -> Unit) {
+        openAndPopUp(Screen.SignUpRoute.route, Screen.SignInRoute.route)
+    }
 }

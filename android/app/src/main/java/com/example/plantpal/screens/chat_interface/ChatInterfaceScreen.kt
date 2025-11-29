@@ -15,13 +15,16 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,9 +33,11 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,9 +61,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.plantpal.ui.theme.PlantPalTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -93,7 +101,7 @@ fun ChatInterfaceScreen(
     val chatThreadID by viewModel.chatThreadID.collectAsState()
     val isChatting by viewModel.isChatting.collectAsState()
     val currentMessageLength by viewModel.currentMessageLength.collectAsState()
-
+    val isDeleting by viewModel.isDeleting.collectAsState()
 
 
     ChatInterfaceContent(
@@ -104,11 +112,14 @@ fun ChatInterfaceScreen(
         chatThreadID = chatThreadID,
         isChatting = isChatting,
         currentMessageLength = currentMessageLength,
+        isDeleting = isDeleting,
         updateUserMessage = viewModel::updateUserMessage,
         queryFB = viewModel::queryFB,
         toggleSettings = viewModel::toggleSettings,
         resetChat = viewModel::resetChat,
-        logout = { viewModel.logout(openAndPopUp) }
+        logout = { viewModel.logout(openAndPopUp) },
+        toggleDeleteAccPopup = viewModel::toggleDeleteAccPopup,
+        deleteAndLeave = { viewModel.deleteAndLeave(openAndPopUp) }
     )
 }
 
@@ -123,18 +134,22 @@ fun ChatInterfaceContent(
     chatThreadID: String,
     isChatting: Boolean,
     currentMessageLength: Int,
+    isDeleting: Boolean,
     updateUserMessage: (String) -> Unit,
     queryFB: suspend () -> Unit,
     toggleSettings: () -> Unit,
     resetChat: () -> Unit,
-    logout: () -> Unit
+    logout: () -> Unit,
+    toggleDeleteAccPopup: () -> Unit,
+    deleteAndLeave: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
 
-    LaunchedEffect(currentMessageLength) {
+    LaunchedEffect(currentMessageLength, messages.size) {
         lazyListState.scrollToItem(messages.size+1)
-    }   
+    }
+
 
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -163,7 +178,7 @@ fun ChatInterfaceContent(
             },
             bottomBar = {
                 UserInputBar(
-                    modifier = Modifier,
+                    modifier = Modifier.navigationBarsPadding(),
                     currentText = userMessage,
                     onTextChanged = { updateUserMessage(it) },
                     onSendClicked = {
@@ -177,109 +192,83 @@ fun ChatInterfaceContent(
                 )
             }
         ) { innerPadding ->
-            // The list of messages
-            LazyColumn(
-                state = lazyListState,
+            ChatList(
+                messages = messages,
+                lazyListState = lazyListState,
+                innerPadding = innerPadding
+            )
+        }
+    }
+
+    if (isToggled) {
+        SettingsSheet(
+            toggleSettings = toggleSettings,
+            resetChat = resetChat,
+            logout = logout,
+            toggleDeleteAccPopup = toggleDeleteAccPopup,
+            chatThreadID = chatThreadID
+        )
+    }
+
+    if (isDeleting) {
+        Dialog(onDismissRequest = { toggleDeleteAccPopup() }
+        ) {
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
             ) {
-                // Use items with a key for better performance and animation
-                items(
-                    items = messages,
-                    key = { message -> message.id } // A stable key is important
-                ) { message ->
-                    Column(
-                        horizontalAlignment = if (message.sender == Sender.USER) Alignment.End else Alignment.Start,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 14.dp)
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        "Delete Account?",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        "This action is permanent and cannot be undone.",
+                        textAlign = TextAlign.Center
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        val density = LocalDensity.current
-                        var visible by remember { mutableStateOf(false) }
-
-                        LaunchedEffect(key1 = message.id) {
-                            // This will be triggered for each new message, making it visible.
-                            visible = true
-                        }
-
-                        AnimatedVisibility(
-                            visible = visible,
-                            enter = slideInHorizontally {
-                                with(density) { if (message.sender == Sender.USER) 120.dp.roundToPx() else -120.dp.roundToPx() }
-                            } + expandVertically(
-                                expandFrom = Alignment.Bottom
-                            ) + fadeIn(
-                                initialAlpha = 0.3f
-                            ),
-                            exit = slideOutHorizontally() + shrinkVertically() + fadeOut()
-                        ) {
-                            MessageBubble(
-                                // The MessageBubble no longer needs any special modifiers.
-                                message = message
+                        Button(
+                            onClick = { toggleDeleteAccPopup() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                             )
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                deleteAndLeave()
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Text("Delete")
                         }
                     }
-                }
-
-                item(key = "anchor") {
-                    Spacer(modifier = Modifier.size(1.dp))
-                }
-            }
-        }
-
-        if (isToggled) {
-            ModalBottomSheet(
-                // Intentionally removed fillMaxSize to make it a normal sheet
-                onDismissRequest = { toggleSettings() }
-            ) {
-                // Chat ID Display
-                Text(
-                    text = "Chat Thread ID: $chatThreadID",
-                    modifier = Modifier
-                        .padding(14.dp)
-                        .fillMaxWidth()
-                )
-                // Reset Chat
-                Button(
-                    onClick = {
-                        resetChat()
-                        toggleSettings()
-                    },
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "Reset Chat",
-                        fontSize = 16.sp
-                    )
-                }
-                // Logout Button
-                Button(
-                    onClick = {
-                        logout()
-                    },
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                ) {
-                    Text(
-                        text ="Logout",
-                        fontSize = 16.sp
-                    )
                 }
             }
         }
     }
+
+
 }
 
-// ... (Rest of the file remains the same)
 
 
-// 3. The input field and send button at the bottom
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInputBar(
     modifier: Modifier,
@@ -315,7 +304,70 @@ fun UserInputBar(
     }
 }
 
-// 4. The composable for a single chat bubble
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatList(
+    messages: List<ChatMessage>,
+    lazyListState: LazyListState,
+    innerPadding: PaddingValues
+) {
+    // The list of messages
+    LazyColumn(
+        state = lazyListState,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Use items with a key for better performance and animation
+        items(
+            items = messages,
+            key = { message -> message.id } // A stable key is important
+        ) { message ->
+            Column(
+                horizontalAlignment = if (message.sender == Sender.USER) Alignment.End else Alignment.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp)
+            ) {
+                val density = LocalDensity.current
+                var visible by remember { mutableStateOf(false) }
+
+                LaunchedEffect(key1 = message.id) {
+                    // This will be triggered for each new message, making it visible.
+                    visible = true
+                }
+
+                AnimatedVisibility(
+                    visible = visible,
+                    enter = slideInHorizontally {
+                        with(density) { if (message.sender == Sender.USER) 120.dp.roundToPx() else -120.dp.roundToPx() }
+                    } + expandVertically(
+                        expandFrom = Alignment.Bottom
+                    ) + fadeIn(
+                        initialAlpha = 0.3f
+                    ),
+                    exit = slideOutHorizontally() + shrinkVertically() + fadeOut()
+                ) {
+                    MessageBubble(
+                        // The MessageBubble no longer needs any special modifiers.
+                        message = message
+                    )
+                }
+            }
+        }
+
+        item(key = "spacer") {
+            Spacer(modifier = Modifier.size(20.dp))
+        }
+        item(key = "anchor") {
+            Spacer(modifier = Modifier.size(1.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageBubble(
     message: ChatMessage
@@ -350,8 +402,80 @@ fun MessageBubble(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsSheet(
+    toggleSettings: () -> Unit,
+    resetChat: () -> Unit,
+    logout: () -> Unit,
+    toggleDeleteAccPopup: () -> Unit,
+    chatThreadID: String
+) {
+    ModalBottomSheet(
+        // Intentionally removed fillMaxSize to make it a normal sheet
+        onDismissRequest = { toggleSettings() }
+    ) {
+        // Chat ID Display
+        Text(
+            text = "Chat Thread ID: $chatThreadID",
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth()
+        )
+        // Reset Chat
+        Button(
+            onClick = {
+                resetChat()
+                toggleSettings()
+            },
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
+        ) {
+            Text(
+                text = "Reset Chat",
+                fontSize = 16.sp
+            )
+        }
+        // Delete Account Button
+        Button(
+            onClick = {
+                toggleDeleteAccPopup()
+            },
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer
+            )
+        ) {
+            Text(
+                text = "Delete Account",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
 
-// 5. Preview function to see our screen in Android Studio
+        // Logout Button
+        Button(
+            onClick = {
+                logout()
+            },
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
+        ) {
+            Text(
+                text ="Logout",
+                fontSize = 16.sp
+            )
+        }
+    }
+}
+
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun ChatInterfacePreview() {
@@ -370,11 +494,14 @@ fun ChatInterfacePreview() {
             chatThreadID = "Test123",
             isChatting = false,
             currentMessageLength = 0,
+            isDeleting = false,
             updateUserMessage = {},
             queryFB = {},
             toggleSettings = {},
             resetChat = {},
-            logout = {}
+            logout = {},
+            toggleDeleteAccPopup = {},
+            deleteAndLeave = {}
         )
     }
 }

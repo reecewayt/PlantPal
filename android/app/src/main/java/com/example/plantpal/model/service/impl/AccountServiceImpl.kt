@@ -10,6 +10,7 @@ import com.example.plantpal.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.Firebase
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuthException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -65,10 +66,31 @@ class AccountServiceImpl @Inject constructor() : AccountService {
         }
     }
 
-    override suspend fun signUp(email: String, password: String) {
-        // Disable account creation for now
-        //Firebase.auth.createUserWithEmailAndPassword(email, password).await()
-        throw NotImplementedError("Account creation is not yet implemented")
+    override suspend fun signUp(email: String, password: String): String? {
+        if (email.isEmpty() || password.isEmpty()) {
+            Log.e("AccountServiceImpl", "Email or Password cannot be empty during sign-up.")
+            return "Email or Password cannot be empty."
+        }
+
+        return try {
+            Firebase.auth.createUserWithEmailAndPassword(email.trim(), password.trim()).await()
+            Log.d("AccountServiceImpl", "User account created successfully.")
+            // Success, so return null
+            null
+        } catch (ex: FirebaseAuthException) {
+            val errorCode = ex.errorCode
+            Log.e("AccountServiceImpl", "Firebase Auth Error during sign-up. Code: $errorCode")
+            // Handle specific sign-up errors
+            when (errorCode) {
+                "ERROR_EMAIL_ALREADY_IN_USE" -> "An account with this email address already exists."
+                "ERROR_INVALID_EMAIL" -> "The email address is not valid."
+                "ERROR_WEAK_PASSWORD" -> "The password is too weak. It must be at least 6 characters."
+                else -> "An unexpected error occurred during sign-up."
+            }
+        } catch (e: Exception) {
+            Log.e("AccountServiceImpl", "A non-Firebase exception occurred during sign-up: ${e.message}")
+            "An unexpected error occurred."
+        }
     }
 
     override fun signOut() {
@@ -76,9 +98,12 @@ class AccountServiceImpl @Inject constructor() : AccountService {
     }
 
     override suspend fun deleteAccount() {
-        // Disable account deletion for now
-        //Firebase.auth.currentUser!!.delete().await()
-        throw NotImplementedError("Account deletion is not yet implemented")
-
+        try {
+            Firebase.auth.currentUser?.delete()?.await()
+            Log.d("AccountServiceImpl", "User account deleted successfully.")
+        } catch (e: Exception) {
+            // Log the error but don't crash the app. The calling function will proceed.
+            Log.e("AccountServiceImpl", "Error deleting account, proceeding anyway: ${e.message}")
+        }
     }
 }
