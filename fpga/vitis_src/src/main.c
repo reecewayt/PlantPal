@@ -8,8 +8,17 @@
 #include "logging.h"
 #include "arduino_task.h"
 
-/************************** Global Instances *********************************/
+// Hardware Drivers
+#include "nexys4io.h"
+#include "ads1115.h"
 
+/************************** Global Definitions *******************************/
+
+// Check xparameters.h for the exact name of your Nexys4IO IP base address
+// It usually follows the format: XPAR_<IP_NAME>_S00_AXI_BASEADDR
+#ifndef NEXYS4IO_BASEADDR
+#define NEXYS4IO_BASEADDR XPAR_NEXYS4IO_0_BASEADDR
+#endif
 
 /************************** Function Prototypes ******************************/
 static int PlatformInit(void);
@@ -46,8 +55,6 @@ int main() {
  *
  * Performs initialization after the FreeRTOS scheduler starts. This includes
  * platform hardware initialization and creating application tasks.
- *
- * @param pvParameters Task parameters (unused)
  */
 static void prvPostStartupHook(void *pvParameters) {
     (void)pvParameters;
@@ -56,20 +63,20 @@ static void prvPostStartupHook(void *pvParameters) {
     
     DEBUG_PRINT("Post-startup initialization starting...\r\n");
     
-    // Initialize platform hardware (if needed)
+    // Initialize platform hardware
     Status = PlatformInit();
     if (Status != XST_SUCCESS) {
-        DEBUG_PRINT("Platform initialization failed\r\n");
+        DEBUG_PRINT("CRITICAL ERROR: Platform initialization failed\r\n");
+        // We might want to stall here or continue with degraded functionality
     } else {
         DEBUG_PRINT("Platform initialized successfully\r\n");
     }
     
-    // Initialize Arduino UART communication task
+    // Initialize Arduino UART communication and Watering tasks
     xTaskStatus = xArduinoTaskInit();
     if (xTaskStatus != pdPASS) {
         DEBUG_PRINT("ERROR: Failed to initialize Arduino task\r\n");
     }
-    // TODO: Add additional application task initializations here
     
     DEBUG_PRINT("Post-startup initialization complete\r\n");
     
@@ -83,21 +90,30 @@ static void prvPostStartupHook(void *pvParameters) {
  * @brief Initialize platform hardware
  *
  * This function initializes hardware components needed for the application.
- * Currently a placeholder for future hardware initialization (sensors, GPIO, etc.)
- *
- * @return XST_SUCCESS if successful, XST_FAILURE otherwise
  */
 static int PlatformInit(void) {
+    int Status;
     
-    // TODO: Add hardware initialization here
-    // Examples:
-    // - Initialize GPIO for water pump control
-    // - Initialize I2C for moisture sensor
-    // - Initialize timers
-    // - Initialize other peripherals
+    DEBUG_PRINT("Initializing Hardware Peripherals...\r\n");
+    
+    // 1. Initialize Nexys4IO (LEDs and Switches)
+    //
+    Status = NX4IO_initialize(NEXYS4IO_BASEADDR);
+    if (Status != XST_SUCCESS) {
+        DEBUG_PRINT("Failed to initialize Nexys4IO\r\n");
+        return XST_FAILURE;
+    }
+    
+    // Clear all LEDs on startup
+    NX4IO_setLEDs(0x0000);
+    
+    // 2. Initialize ADS1115 (Soil Moisture Sensor)
+    //
+    Status = ADS1115_Init();
+    if (Status != XST_SUCCESS) {
+        DEBUG_PRINT("Failed to initialize ADS1115\r\n");
+        return XST_FAILURE;
+    }
     
     return XST_SUCCESS;
 }
-
-
-
