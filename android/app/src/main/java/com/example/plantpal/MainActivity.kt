@@ -1,3 +1,23 @@
+/**
+ *  @file: MainActivity.kt
+ *  @brief: Entry Point for PlantPal App
+ *
+ *      @author: Reece Wayt, Truong Le, Gemini
+ *      @date: 11/29/2025
+ *
+ *      @description: This file setup the Android entry point, and creates the following items:
+ *          - Navigation Controller and Host
+ *          - Composable for Sign In Screen
+ *          - Composable for Sign Up Screen
+ *          - Composable for Chat Interface Screen
+ *          When the app is booted up, a navigation controller and host are created to establish a navigation
+ *      system for the app. Using openAndPopUp, this lambda is passed into each screen composable so that each screen
+ *      can use the lambda to navigate to a specified screen using the target object within a sealed class located in
+ *      AppRoutes.kt. In addition, each screen has a separate VM that is passed to each composable.
+ * 
+ *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
+ */
+
 package com.example.plantpal
 
 import android.os.Bundle
@@ -19,9 +39,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.functions.functions
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.runtime.remember
-import javax.inject.Inject
 
-import com.example.plantpal.model.service.AccountService
 import com.example.plantpal.screens.chat_interface.ChatInterfaceScreen
 import com.example.plantpal.screens.chat_interface.ChatViewModel
 import com.example.plantpal.screens.sign_in.SignInScreen
@@ -29,21 +47,16 @@ import com.example.plantpal.screens.sign_in.SignInViewModel
 import com.example.plantpal.screens.sign_up.SignUpScreen
 import com.example.plantpal.screens.sign_up.SignUpViewModel
 
-
 const val SHARED_GRAPH_ROUTE = "shared_graph"
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject
-    lateinit var accountService: AccountService
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         //configFirebaseServices()
 
         setContent {
             PlantPalTheme(dynamicColor = false) {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -56,6 +69,8 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun PlantPalNavHost() {
+
+        // Create NavController and setup NavHost with all 3 screens
         val navController = rememberNavController()
 
         NavHost(navController = navController, startDestination = SHARED_GRAPH_ROUTE) {
@@ -63,6 +78,9 @@ class MainActivity : ComponentActivity() {
                 startDestination = Screen.SignInRoute.route,
                 route = SHARED_GRAPH_ROUTE
             ) {
+                // Each composable gets set up in the NavHost. openAndPopUp and the screen
+                // composable's viewmodel are passed as args into the screen composables.
+
                 composable(Screen.SignInRoute.route) { backStackEntry ->
                     val parentEntry = remember(backStackEntry) {
                         navController.getBackStackEntry(SHARED_GRAPH_ROUTE)
@@ -109,6 +127,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // For debugging locally with Firebase, this function is used to enable the emulator
     private fun configFirebaseServices() {
         if(BuildConfig.DEBUG){
             Firebase.auth.useEmulator(LOCALHOST, AUTH_PORT)

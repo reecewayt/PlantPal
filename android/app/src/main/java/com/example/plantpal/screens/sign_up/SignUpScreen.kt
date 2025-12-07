@@ -1,3 +1,24 @@
+/**
+ *  @file: SignUpScreen.kt
+ *  @brief: Sign Up interface for PlantPal App
+ *
+ *      @author: Truong Le, Gemini
+ *      @date: 12/6/2025
+ *
+ *      @description: This screen creates a sign-in screen for the app. It includes the following features:
+ *          - Email and Password input fields
+ *          - Create Account button
+ *          - Loading indicator during sign-in process
+ *          - Sign In button to navigate to Sign In Screen
+ *          The screen invokes functions from AccountServiceImpl.kt to sign up using the provided credentials.
+ *      If the user types in an invalid email and invalid password that does not abide with the Firebase
+ *      password policy, it will notify the user with a text box that will say what error occurred. If the
+ *      credentials are valid, the text box will tell the user that the credentials are authenticated and
+ *      the screen will transition to the sign in screen.
+ *
+ *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
+ */
+
 package com.example.plantpal.screens.sign_up
 
 import androidx.compose.animation.AnimatedVisibility
@@ -8,7 +29,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,15 +60,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.plantpal.R
-import com.example.plantpal.Screen
 import com.example.plantpal.ui.theme.PlantPalTheme
 
 @Composable
@@ -72,10 +89,7 @@ fun SignUpScreen(
         onEmailChange = viewModel::updateEmail,
         onPasswordChange = viewModel::updatePassword,
         onSignUpClick = { viewModel.onSignUpClick(openAndPopUp) },
-        onBackToSignInClick = {
-            viewModel.clearState()
-            openAndPopUp(Screen.SignInRoute.route, Screen.SignUpRoute.route)
-        }
+        onBackToSignInClick = { viewModel.onSignInClick(openAndPopUp) }
     )
 }
 

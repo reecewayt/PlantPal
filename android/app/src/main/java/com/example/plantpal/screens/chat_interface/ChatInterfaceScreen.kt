@@ -1,6 +1,25 @@
+/**
+ *  @file: SignUpScreen.kt
+ *  @brief: Sign Up interface for PlantPal App
+ *
+ *      @author: Truong Le, Gemini
+ *      @date: 12/6/2025
+ *
+ *      @description: This screen creates a chat interface to communicate with the Plant Pal
+ *      AI agent. This screen provides the following:
+ *          - Scrollable Chat Log
+ *          - Input Text Field to send agent messages
+ *          - Settings Icon for displaying pop up menu for the following:
+ *              - Chat ID
+ *              - Resetting the chat
+ *              - Deleting the account
+ *              - Logging out
+ *
+ *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
+ */
+
 package com.example.plantpal.screens.chat_interface
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -13,7 +32,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -37,7 +55,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,15 +68,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,12 +82,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.plantpal.ui.theme.PlantPalTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-
-// 1. Data model for a single message
 data class ChatMessage(
     val text: String,
     val sender: Sender,
@@ -123,7 +134,6 @@ fun ChatInterfaceScreen(
     )
 }
 
-// 2. The main Chat Screen Composable
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class) // <-- Add ExperimentalFoundationApi
 @Composable
 fun ChatInterfaceContent(
@@ -146,60 +156,62 @@ fun ChatInterfaceContent(
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
 
+    // When the message list changes, or the message contents change, the list will scroll to the bottom
     LaunchedEffect(currentMessageLength, messages.size) {
         lazyListState.scrollToItem(messages.size+1)
     }
 
-
-    Box(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Plant Pal")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    actions = {
-                        IconButton(onClick = { toggleSettings() }) {
-                            Icon(
-                                imageVector = if (isToggled) Icons.Filled.Settings else Icons.Outlined.Settings,
-                                contentDescription = "Toggle settings",
-                                modifier = Modifier.size(24.dp),
-                                tint = if (isToggled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+    Scaffold(
+        topBar = {
+            // Create topbar with title and settings icon
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Plant Pal")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                actions = {
+                    IconButton(onClick = { toggleSettings() }) {
+                        Icon(
+                            imageVector = if (isToggled) Icons.Filled.Settings else Icons.Outlined.Settings,
+                            contentDescription = "Toggle settings",
+                            modifier = Modifier.size(24.dp),
+                            tint = if (isToggled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            // Create a user input bar at the bottom of the screen
+            UserInputBar(
+                modifier = Modifier.navigationBarsPadding(),
+                currentText = userMessage,
+                onTextChanged = { updateUserMessage(it) },
+                onSendClicked = {
+                    if (userMessage.isNotBlank()) {
+                        scope.launch {
+                            queryFB()
                         }
                     }
-                )
-            },
-            bottomBar = {
-                UserInputBar(
-                    modifier = Modifier.navigationBarsPadding(),
-                    currentText = userMessage,
-                    onTextChanged = { updateUserMessage(it) },
-                    onSendClicked = {
-                        if (userMessage.isNotBlank()) {
-                            scope.launch {
-                                queryFB()
-                            }
-                        }
-                    },
-                    enabled = !isChatting
-                )
-            }
-        ) { innerPadding ->
-            ChatList(
-                messages = messages,
-                lazyListState = lazyListState,
-                innerPadding = innerPadding
+                },
+                enabled = !isChatting
             )
         }
+    ) { innerPadding ->
+        // Create ChatList composable to display the messages
+        ChatList(
+            messages = messages,
+            lazyListState = lazyListState,
+            innerPadding = innerPadding
+        )
     }
 
+    // Create settings sheet if isToggled is true
     if (isToggled) {
         SettingsSheet(
             toggleSettings = toggleSettings,
@@ -210,8 +222,10 @@ fun ChatInterfaceContent(
         )
     }
 
+    // Display delete confirmation message if isDeleting is true
     if (isDeleting) {
-        Dialog(onDismissRequest = { toggleDeleteAccPopup() }
+        Dialog(
+            onDismissRequest = { toggleDeleteAccPopup() }
         ) {
             Card(
                 modifier = Modifier
@@ -237,6 +251,7 @@ fun ChatInterfaceContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
+                        // Create a cancel and delete button for account deletion
                         Button(
                             onClick = { toggleDeleteAccPopup() },
                             colors = ButtonDefaults.buttonColors(
@@ -247,9 +262,7 @@ fun ChatInterfaceContent(
                             Text("Cancel")
                         }
                         Button(
-                            onClick = {
-                                deleteAndLeave()
-                            },
+                            onClick = { deleteAndLeave() },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
                                 contentColor = MaterialTheme.colorScheme.onErrorContainer
@@ -266,8 +279,7 @@ fun ChatInterfaceContent(
 
 }
 
-
-
+// User Input Bar - Creates a text field to send messages, updates user message using onTextChanged
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInputBar(
@@ -304,6 +316,7 @@ fun UserInputBar(
     }
 }
 
+// Chat List - Creates a list of messages in a LazyColumn
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatList(
@@ -339,6 +352,7 @@ fun ChatList(
                     visible = true
                 }
 
+                // Animate message into view when the message ID changes
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInHorizontally {
@@ -358,6 +372,7 @@ fun ChatList(
             }
         }
 
+        // Create placeholders with spacer and anchor to scroll list to very bottom
         item(key = "spacer") {
             Spacer(modifier = Modifier.size(20.dp))
         }
@@ -367,6 +382,7 @@ fun ChatList(
     }
 }
 
+// Message Bubble - Creates a bubble for each message
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageBubble(
@@ -377,9 +393,8 @@ fun MessageBubble(
     Card(
         modifier = Modifier
             .fillMaxWidth(0.8f)
-            // ✨ 2. APPLY THE MODIFIER HERE ✨
-            // This will smoothly animate the card's size as the text inside grows.
             .animateContentSize(
+                // Provide animation spec for bubble
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioNoBouncy,
                     stiffness = Spring.StiffnessLow
@@ -387,6 +402,7 @@ fun MessageBubble(
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
+            // Color based on sender
             containerColor = if (isUserMessage) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
@@ -402,6 +418,7 @@ fun MessageBubble(
     }
 }
 
+// Settings Sheet - Creates a bottom sheet for settings such as deleting account, logging out, etc.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSheet(
@@ -412,7 +429,6 @@ fun SettingsSheet(
     chatThreadID: String
 ) {
     ModalBottomSheet(
-        // Intentionally removed fillMaxSize to make it a normal sheet
         onDismissRequest = { toggleSettings() }
     ) {
         // Chat ID Display
@@ -422,7 +438,7 @@ fun SettingsSheet(
                 .padding(14.dp)
                 .fillMaxWidth()
         )
-        // Reset Chat
+        // Reset Chat and toggle settings button
         Button(
             onClick = {
                 resetChat()
@@ -437,7 +453,7 @@ fun SettingsSheet(
                 fontSize = 16.sp
             )
         }
-        // Delete Account Button
+        // Delete Account Button (toggles delete account popup)
         Button(
             onClick = {
                 toggleDeleteAccPopup()
@@ -474,7 +490,6 @@ fun SettingsSheet(
         }
     }
 }
-
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

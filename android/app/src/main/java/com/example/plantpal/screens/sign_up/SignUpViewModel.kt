@@ -1,10 +1,22 @@
+/**
+ *  @file: SignUpViewModel.kt
+ *  @brief: Sign Up View Model for PlantPal App
+ *
+ *      @author: Reece Wayt, Truong Le, Gemini
+ *      @date: 12/6/2025
+ *
+ *      @description: This viewmodel creates the states and functions for the sign-up screen. It includes
+ *      update functions, sign up functions and navigation functions.
+ *
+ *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
+ */
+
 package com.example.plantpal.screens.sign_up
 
 import android.util.Log
 import com.example.plantpal.Screen
 import com.example.plantpal.model.service.AccountService
 import com.example.plantpal.screens.PlantPalAppViewModel
-import com.example.plantpal.screens.sign_in.SignInViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,5 +73,11 @@ class SignUpViewModel @Inject constructor(
                 signUpStatus.value = status
             }
         }
+    }
+
+    fun onSignInClick(openAndPopUp: (String, String) -> Unit) {
+        // Open Sign In Screen when invoked
+        clearState()
+        openAndPopUp(Screen.SignInRoute.route, Screen.SignUpRoute.route)
     }
 }

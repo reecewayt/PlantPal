@@ -1,10 +1,20 @@
+/**
+ *  @file: ChatViewModel.kt
+ *  @brief: Chat View Model for PlantPal App
+ *
+ *      @author: Truong Le, Gemini
+ *      @date: 12/6/2025
+ *
+ *      @description: This viewmodel creates the states and functions for the chat screen such as:
+ *          - Chat related functions for adding new messages from the user and agent
+ *          - Update functions for states for UI function
+ *
+ *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
+ */
+
 package com.example.plantpal.screens.chat_interface
 
 import android.util.Log
-import androidx.compose.animation.core.copy
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.semantics.text
 import com.example.plantpal.Screen
 import com.example.plantpal.model.service.AccountService
 import com.example.plantpal.screens.PlantPalAppViewModel
@@ -15,11 +25,7 @@ import java.util.UUID
 import javax.inject.Inject
 import com.google.firebase.Firebase
 import com.google.firebase.functions.functions
-import com.google.firebase.auth.auth
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
-
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -43,42 +49,71 @@ class ChatViewModel @Inject constructor(
         chatThreadID.value = UUID.randomUUID().toString()
     }
 
+
+    // -- Message Related Functions ---
     fun updateUserMessage(newMessage: String) {
         userMessage.value = newMessage
     }
 
+    private suspend fun chat(message: String, chatThreadId: String? = "abc_123"): String {
+        val data = hashMapOf(
+            "message" to message,
+            "thread_id" to chatThreadId
+        )
+
+        try {
+            // Call the function and await the result
+            val result = Firebase.functions
+                .getHttpsCallable("plantpal_chat")
+                .call(data)
+                .await()
+
+            val resultMap = result.data as? Map<*, *>
+            val success = resultMap?.get("success") as? Boolean ?: false
+
+            return if (success) {
+                Log.d("ChatViewModel", "Response from PlantPal: ${resultMap["response"]}")
+                resultMap["response"] as? String ?: "No response received"
+            } else {
+                Log.d("ChatViewModel", "Error: Failed to get response from PlantPal")
+                "Error: Failed to get response from PlantPal"
+            }
+
+        } catch (e: Exception) {
+            return "Error: ${e.message}"
+        }
+    }
+
     suspend fun queryFB() {
+        // Set chatting status to true, and grab user message
         isChatting.value = true
         val incomingMessage = userMessage.value
 
         // Clear input box immediately
         updateUserMessage("")
 
-        // 1. Add user message to chat. This will appear instantly.
+        // Add user message to chat
         _messages.value += ChatMessage(incomingMessage, Sender.USER)
 
-        delay(1500)
+        delay(1000)
 
-        // 2. Add a placeholder for the AI's response.
+        // Add a placeholder for the AI's response
         val aiPlaceholder = ChatMessage("Thinking...", Sender.AI)
         _messages.value += aiPlaceholder
 
-        // 3. Get the full response from the backend.
+        // Get the full response from the backend
         val fullResponse: String = chat(incomingMessage, chatThreadID.value)
 
-        // 4. Remove current text in placeholder
+        // Remove current text in placeholder
         val currentList = _messages.value
         val lastMessage = currentList.last()
         _messages.value = currentList.dropLast(1) + lastMessage.copy(text = "")
 
-        // 5. Animate the full response into the placeholder and enable chat after animation is done.
+        // Animate the full response into the placeholder and enable chat after animation is done
         animateMessage(fullResponse)
         isChatting.value = false
     }
 
-    /**
-     * Replaces the last message (the AI placeholder) with a character-by-character animation.
-     */
     private suspend fun animateMessage(fullText: String) {
         val characterDelay = 15L // milliseconds between each character
 
@@ -96,6 +131,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    // -- Interface Related Functions ---
     fun toggleSettings() {
         isToggled.value = !isToggled.value
     }
@@ -112,62 +148,29 @@ class ChatViewModel @Inject constructor(
     }
 
     fun logout(openAndPopUp: (String, String) -> Unit) {
-        // 1. Perform all state updates and synchronous operations first.
+        // Update states prior to logout
         isToggled.value = false
         accountService.signOut()
         resetChat()
 
-        // 2. Navigate away as the very last step.
+        // Navigate to sign in screen
         openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
     }
 
     fun deleteAndLeave(openAndPopUp: (String, String) -> Unit) {
         launchCatching {
-            // 1. Perform the critical backend operation on a background thread.
+            // Delete account
             accountService.deleteAccount()
 
-            // 3. Update local state now that the background operation is complete.
+            // Update states prior to logout
             isDeleting.value = false
             isToggled.value = false
             resetChat()
 
-            // 4. Navigate as the final action, now safely on the Main thread.
+            // Navigate to sign in screen
             openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
         }
     }
 
-    private suspend fun chat(message: String, chatThreadId: String? = "abc_123"): String {
-        val data = hashMapOf(
-            "message" to message,
-            "thread_id" to chatThreadId
-        )
 
-        if (Firebase.auth.currentUser == null) {
-            Log.d("ChatViewModel", "User is not signed in, using simulated response.")
-            delay(1000) // Simulate network delay
-            return "This is a simulated response because you are not signed in. The text will animate character by character."
-        }
-
-        try {
-            // Call the function and await the result
-            val result = Firebase.functions
-                .getHttpsCallable("plantpal_chat")
-                .call(data)
-                .await() // This suspends the coroutine until the task is complete
-
-            val resultMap = result.data as? Map<*, *>
-            val success = resultMap?.get("success") as? Boolean ?: false
-
-            return if (success) {
-                Log.d("ChatViewModel", "Response from PlantPal: ${resultMap["response"]}")
-                resultMap["response"] as? String ?: "No response received"
-            } else {
-                Log.d("ChatViewModel", "Error: Failed to get response from PlantPal")
-                "Error: Failed to get response from PlantPal"
-            }
-
-        } catch (e: Exception) {
-            return "Error: ${e.message}"
-        }
-    }
 }

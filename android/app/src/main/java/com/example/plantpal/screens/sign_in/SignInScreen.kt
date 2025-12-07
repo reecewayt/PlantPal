@@ -1,5 +1,25 @@
-// UI code adapted from Firebase Notes Example App:
-// Source: https://github.com/FirebaseExtended/firebase-video-samples/tree/main/fundamentals/android/auth-email-password/Notes
+/**
+ *  @file: SignInScreen.kt
+ *  @brief: Sign In Interface for PlantPal App
+ *
+ *      @author: Reece Wayt, Truong Le, Gemini
+ *      @date: 11/29/2025
+ *
+ *      @description: This screen creates a sign-in screen for the app. It includes the following features:
+ *          - Email and Password input fields
+ *          - Sign In button
+ *          - Loading indicator during sign-in process
+ *          - Sign Up button to navigate to Sign Up Screen
+ *          The screen invokes functions from AccountServiceImpl.kt to sign in using the provided credentials.
+ *      If the user types in invalid credentials or the credentials are malformed, it will notify the user
+ *      with a text box that will say what error occurred. If the credentials are valid, the text box will
+ *      tell the user that the credentials are authenticated and it will transition to the chat screen.
+ * 
+ *  @note: UI code adapted from Firebase Notes Example App:
+ *      Source: https://github.com/FirebaseExtended/firebase-video-samples/tree/main/fundamentals/android/auth-email-password/Notes
+ *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
+ */
+
 
 package com.example.plantpal.screens.sign_in
 
@@ -18,7 +38,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,7 +72,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.plantpal.R
-import com.example.plantpal.Screen
 import com.example.plantpal.ui.theme.PlantPalTheme
 
 @Composable
@@ -78,7 +96,7 @@ fun SignInScreen(
         onEmailChange = viewModel::updateEmail,
         onPasswordChange = viewModel::updatePassword,
         onSignInClick = { viewModel.onSignInClick(openAndPopUp) },
-        switchToSignUp = {openAndPopUp(Screen.SignUpRoute.route, Screen.SignInRoute.route)}
+        switchToSignUp = { viewModel.onSignUpClick(openAndPopUp) }
     )
 }
 
@@ -100,7 +118,6 @@ fun SignInScreenContent(
             .fillMaxSize()
             .padding(16.dp),
         contentAlignment = Alignment.Center,
-
     ) {
         Column(
             modifier = modifier
@@ -126,6 +143,7 @@ fun SignInScreenContent(
                 fontWeight = FontWeight.Bold
             )
 
+            // Column for loading/status indicators
             Column(
                 modifier = modifier
                     .fillMaxWidth()
@@ -134,6 +152,7 @@ fun SignInScreenContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                // ... AnimatedVisibility content remains the same ...
                 val density = LocalDensity.current
 
                 AnimatedVisibility(
@@ -181,6 +200,7 @@ fun SignInScreenContent(
             }
 
             OutlinedTextField(
+                // ... parameters remain the same ...
                 singleLine = true,
                 modifier = modifier
                     .fillMaxWidth()
@@ -208,6 +228,7 @@ fun SignInScreenContent(
             )
 
             OutlinedTextField(
+                // ... parameters remain the same ...
                 singleLine = true,
                 modifier = modifier
                     .fillMaxWidth()
@@ -235,18 +256,13 @@ fun SignInScreenContent(
                 enabled = !signInLoading && signInStatus != "Success"
             )
 
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            )
-
             Button(
+                // ... parameters remain the same ...
                 onClick = { onSignInClick() },
                 shape = RoundedCornerShape(50),
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(16.dp, 0.dp),
+                    .padding(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (!signInLoading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = if (!signInLoading) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -260,26 +276,16 @@ fun SignInScreenContent(
                 )
             }
 
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp)
-            )
-
             // Sign Up Button
             TextButton(
+                modifier = modifier
+                    .fillMaxWidth(),
                 onClick = { switchToSignUp() },
                 enabled = !signInLoading && signInStatus != "Success"
             ) {
                 Text(text = "Go to Sign Up", fontSize = 16.sp)
             }
-
         }
-
-// TODO: SignUp flow needs to be defined once implemented
-//        TextButton(onClick = { viewModel.onSignUpClick(openAndPopUp) }) {
-//            Text(text = stringResource(R.string.sign_up_description), fontSize = 16.sp)
-//        }
     }
 }
 
