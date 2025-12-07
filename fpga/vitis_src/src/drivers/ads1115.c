@@ -3,7 +3,11 @@
 #include "xparameters.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "xil_printf.h"
+#define LOG_TAG "adc"
+#include "logging.h"
+
+
+// #include "xil_printf.h"
 
 // Define your I2C Base Address here (Check xparameters.h)
 // Often named XPAR_IIC_0_BASEADDR or XPAR_AXI_IIC_0_BASEADDR
@@ -35,7 +39,8 @@ u16 ADS1115_ReadRaw(void) {
     // Send configuration (3 bytes: Reg Ptr + Config MSB + Config LSB)
     unsigned int bytesSent = XIic_Send(ADS_I2C_BASE, ADS1115_ADDR, writeBuffer, 3, XIIC_STOP);
     if (bytesSent != 3) {
-        xil_printf("I2C Write Failed\r\n");
+        DEBUG_PRINT("I2C Write Failed\r\n");
+        // xil_printf("I2C Write Failed\r\n");
         return 0;
     }
 
@@ -49,7 +54,7 @@ u16 ADS1115_ReadRaw(void) {
     // 4. Read 2 Bytes
     unsigned int bytesRecv = XIic_Recv(ADS_I2C_BASE, ADS1115_ADDR, readBuffer, 2, XIIC_STOP);
     if (bytesRecv != 2) {
-        xil_printf("I2C Read Failed\r\n");
+        DEBUG_PRINT("I2C Read Failed\r\n");
         return 0;
     }
 
