@@ -7,6 +7,7 @@
 #define LOG_TAG "MAIN"
 #include "logging.h"
 #include "arduino_task.h"
+#include "led_animation_task.h"
 
 /************************** Global Instances *********************************/
 
@@ -68,6 +69,12 @@ static void prvPostStartupHook(void *pvParameters) {
     xTaskStatus = xArduinoTaskInit();
     if (xTaskStatus != pdPASS) {
         DEBUG_PRINT("ERROR: Failed to initialize Arduino task\r\n");
+    }
+
+    // Initialize LED Animation task
+    xTaskStatus = xLedAnimationTaskInit(tskIDLE_PRIORITY + 1);
+    if (xTaskStatus != pdPASS) {
+        DEBUG_PRINT("ERROR: Failed to initialize LED Animation task\r\n");
     }
     // TODO: Add additional application task initializations here
     

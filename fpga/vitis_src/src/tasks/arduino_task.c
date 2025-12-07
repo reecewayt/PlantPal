@@ -21,6 +21,7 @@
 
 // Include the shared protocol header
 #include "plant_pal_uart_protocol.h"
+#include "led_animation_task.h"
 
 /************************** Local Definitions ********************************/
 #define RX_BUFFER_SIZE          64
@@ -176,6 +177,11 @@ static void prvHandleWaterOn(const u8 *payload, u8 length) {
     // 1. Turn on pump GPIO
     // 2. Set a timer for duration_seconds
     // 3. Turn off pump when timer expires
+    BaseType_t result = xSendLedAnimationCommand(duration);
+    
+    if (result != pdPASS) {
+        DEBUG_PRINT("Failed to send LED animation command\r\n");
+    }
     
     // Send acknowledgment
     DEBUG_PRINT("Sending RESP_WATER_ACK\r\n");
