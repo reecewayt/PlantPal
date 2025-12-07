@@ -7,10 +7,7 @@
 #include "logging.h"
 
 
-// #include "xil_printf.h"
-
 // Define your I2C Base Address here (Check xparameters.h)
-// Often named XPAR_IIC_0_BASEADDR or XPAR_AXI_IIC_0_BASEADDR
 #ifndef ADS_I2C_BASE
 #define ADS_I2C_BASE XPAR_XIIC_0_BASEADDR
 #endif
@@ -29,7 +26,7 @@ int ADS1115_Init(void) {
 u16 ADS1115_ReadRaw(void) {
     u8 writeBuffer[3];
     u8 readBuffer[2];
-    int Status;
+    // int Status;  <-- REMOVED UNUSED VARIABLE
 
     // 1. Write Config to Trigger Conversion
     writeBuffer[0] = ADS1115_REG_CONFIG;
@@ -40,7 +37,6 @@ u16 ADS1115_ReadRaw(void) {
     unsigned int bytesSent = XIic_Send(ADS_I2C_BASE, ADS1115_ADDR, writeBuffer, 3, XIIC_STOP);
     if (bytesSent != 3) {
         DEBUG_PRINT("I2C Write Failed\r\n");
-        // xil_printf("I2C Write Failed\r\n");
         return 0;
     }
 
@@ -59,21 +55,22 @@ u16 ADS1115_ReadRaw(void) {
     }
 
     // Combine bytes (Big Endian)
-    u16 rawValue = (readBuffer[0] << 8) | readBuffer[1];
-    return rawValue;
+    u16 raw = ((u16)readBuffer[0] << 8) | readBuffer[1];
+    return raw;
 }
 
 u8 ADS1115_GetMoisturePercent(void) {
     u16 raw = ADS1115_ReadRaw();
     
-    // Clamp values to calibration range
+    // Constrain logic
     if (raw > SOIL_DRY_RAW) raw = SOIL_DRY_RAW;
     if (raw < SOIL_WET_RAW) raw = SOIL_WET_RAW;
 
-    // Map Raw to Percentage (Inverse relationship: Lower raw = Wetter)
-    // Formula: ( (Dry - Raw) * 100 ) / (Dry - Wet)
-    u32 numerator = (SOIL_DRY_RAW - raw) * 100;
-    u32 denominator = (SOIL_DRY_RAW - SOIL_WET_RAW);
+    // Map raw value to 0-100%
+    // Note: Capacitive sensors usually have High Value = Dry, Low Value = Wet
+    // So we inverse the mapping.
+    u32 range = SOIL_DRY_RAW - SOIL_WET_RAW;
+    u32 delta = SOIL_DRY_RAW - raw;
     
-    return (u8)(numerator / denominator);
+    return (u8)((delta * 100) / range);
 }
