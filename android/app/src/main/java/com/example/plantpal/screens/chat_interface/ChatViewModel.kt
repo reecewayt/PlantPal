@@ -1,6 +1,21 @@
+/**
+ *  @file: ChatViewModel.kt
+ *  @brief: Chat View Model for PlantPal App
+ *
+ *      @author: Truong Le, Gemini
+ *      @date: 12/6/2025
+ *
+ *      @description: This viewmodel creates the states and functions for the chat screen such as:
+ *          - Chat related functions for adding new messages from the user and agent
+ *          - Update functions for states for UI function
+ *
+ *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
+ */
+
 package com.example.plantpal.screens.chat_interface
 
 import android.util.Log
+import com.example.plantpal.Screen
 import com.example.plantpal.model.service.AccountService
 import com.example.plantpal.screens.PlantPalAppViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,73 +25,34 @@ import java.util.UUID
 import javax.inject.Inject
 import com.google.firebase.Firebase
 import com.google.firebase.functions.functions
-import com.google.firebase.auth.auth
-
+import kotlinx.coroutines.delay
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     val accountService: AccountService
-)
-: PlantPalAppViewModel() {
-    // State management: these 'remember' calls hold the state of our chat
-    val messages = MutableStateFlow(
+): PlantPalAppViewModel() {
+    private val _messages = MutableStateFlow(
         listOf(ChatMessage("Hello! How can I help you today?", Sender.AI))
     )
+    val messages = _messages
+
     val userMessage = MutableStateFlow("")
     val isToggled = MutableStateFlow(false)
+    val isChatting = MutableStateFlow(false)
+
+    val currentMessageLength = MutableStateFlow(0)
 
     val chatThreadID = MutableStateFlow("")
+    val isDeleting = MutableStateFlow(false)
 
     init {
         chatThreadID.value = UUID.randomUUID().toString()
     }
 
+
+    // -- Message Related Functions ---
     fun updateUserMessage(newMessage: String) {
         userMessage.value = newMessage
-    }
-
-    suspend fun queryFB() {
-        val waitMessage = ChatMessage("Thinking...", Sender.AI)
-        val incomingMessage = userMessage.value
-
-        // Clear input box when message is sent
-        updateUserMessage("")
-
-        // Add user message to chat
-        addMessage(ChatMessage(incomingMessage, Sender.USER))
-        addMessage(waitMessage)
-
-        // Add AI message to chat
-        val outputMessage: String = chat(incomingMessage, chatThreadID.value)
-
-        // Delete wait message and add outputMessage
-        deleteMessage(waitMessage)
-        addMessage(ChatMessage(outputMessage, Sender.AI))
-    }
-
-    fun toggleSettings() {
-        isToggled.value = !isToggled.value
-    }
-
-    fun resetChat() {
-        // Clear previous chat logs
-        messages.value = listOf(ChatMessage("Hello! How can I help you today?", Sender.AI))
-        userMessage.value = ""
-        chatThreadID.value = UUID.randomUUID().toString()
-    }
-
-    fun logout() {
-        isToggled.value = false
-        resetChat()
-        accountService.signOut()
-    }
-
-    private fun addMessage(message: ChatMessage) {
-        messages.value += message
-    }
-
-    private fun deleteMessage(message: ChatMessage) {
-        messages.value -= message
     }
 
     private suspend fun chat(message: String, chatThreadId: String? = "abc_123"): String {
@@ -85,20 +61,12 @@ class ChatViewModel @Inject constructor(
             "thread_id" to chatThreadId
         )
 
-        if (Firebase.auth.currentUser != null) {
-            Log.d("ChatViewModel", "User ID: ${Firebase.auth.currentUser?.uid}")
-            Log.d("ChatViewModel", "User email: ${Firebase.auth.currentUser?.email}")
-            Log.d("ChatViewModel", "User details: ${Firebase.auth.currentUser?.metadata}")
-        } else {
-            Log.d("ChatViewModel", "User is not signed in")
-        }
-
         try {
             // Call the function and await the result
             val result = Firebase.functions
                 .getHttpsCallable("plantpal_chat")
                 .call(data)
-                .await() // This suspends the coroutine until the task is complete
+                .await()
 
             val resultMap = result.data as? Map<*, *>
             val success = resultMap?.get("success") as? Boolean ?: false
@@ -115,7 +83,94 @@ class ChatViewModel @Inject constructor(
             return "Error: ${e.message}"
         }
     }
+
+    suspend fun queryFB() {
+        // Set chatting status to true, and grab user message
+        isChatting.value = true
+        val incomingMessage = userMessage.value
+
+        // Clear input box immediately
+        updateUserMessage("")
+
+        // Add user message to chat
+        _messages.value += ChatMessage(incomingMessage, Sender.USER)
+
+        delay(1000)
+
+        // Add a placeholder for the AI's response
+        val aiPlaceholder = ChatMessage("Thinking...", Sender.AI)
+        _messages.value += aiPlaceholder
+
+        // Get the full response from the backend
+        val fullResponse: String = chat(incomingMessage, chatThreadID.value)
+
+        // Remove current text in placeholder
+        val currentList = _messages.value
+        val lastMessage = currentList.last()
+        _messages.value = currentList.dropLast(1) + lastMessage.copy(text = "")
+
+        // Animate the full response into the placeholder and enable chat after animation is done
+        animateMessage(fullResponse)
+        isChatting.value = false
+    }
+
+    private suspend fun animateMessage(fullText: String) {
+        val characterDelay = 15L // milliseconds between each character
+
+        // Build the text one character at a time
+        fullText.forEach { char ->
+            // Get the current list, drop the last message, and add an updated version
+            val currentList = _messages.value
+            val lastMessage = currentList.last()
+            val updatedMessage = lastMessage.copy(text = lastMessage.text + char)
+
+            currentMessageLength.value = updatedMessage.text.length
+
+            _messages.value = currentList.dropLast(1) + updatedMessage
+            delay(characterDelay)
+        }
+    }
+
+    // -- Interface Related Functions ---
+    fun toggleSettings() {
+        isToggled.value = !isToggled.value
+    }
+
+    fun toggleDeleteAccPopup() {
+        isDeleting.value = !isDeleting.value
+    }
+
+    fun resetChat() {
+        // Clear previous chat logs
+        _messages.value = listOf(ChatMessage("Hello! How can I help you today?", Sender.AI))
+        userMessage.value = ""
+        chatThreadID.value = UUID.randomUUID().toString()
+    }
+
+    fun logout(openAndPopUp: (String, String) -> Unit) {
+        // Update states prior to logout
+        isToggled.value = false
+        accountService.signOut()
+        resetChat()
+
+        // Navigate to sign in screen
+        openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
+    }
+
+    fun deleteAndLeave(openAndPopUp: (String, String) -> Unit) {
+        launchCatching {
+            // Delete account
+            accountService.deleteAccount()
+
+            // Update states prior to logout
+            isDeleting.value = false
+            isToggled.value = false
+            resetChat()
+
+            // Navigate to sign in screen
+            openAndPopUp(Screen.SignInRoute.route, Screen.ChatRoute.route)
+        }
+    }
+
+
 }
-
-
-

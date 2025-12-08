@@ -8,6 +8,7 @@
 #include "logging.h"
 #include "arduino_task.h"
 #include "adc_testing.h" // <-- NEW: Include  header for the ADC testing task
+#include "led_animation_task.h"
 
 /************************** Global Instances *********************************/
 
@@ -77,6 +78,12 @@ static void prvPostStartupHook(void *pvParameters) {
         DEBUG_PRINT("ERROR: Failed to initialize ADC testing task\r\n");
     }
 
+
+    // Initialize LED Animation task
+    xTaskStatus = xLedAnimationTaskInit(tskIDLE_PRIORITY + 1);
+    if (xTaskStatus != pdPASS) {
+        DEBUG_PRINT("ERROR: Failed to initialize LED Animation task\r\n");
+    }
     // TODO: Add additional application task initializations here
     
     DEBUG_PRINT("Post-startup initialization complete\r\n");

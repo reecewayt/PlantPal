@@ -1,28 +1,25 @@
 /**
- *  @file: SignInScreen.kt
- *  @brief: Sign In Interface for PlantPal App
+ *  @file: SignUpScreen.kt
+ *  @brief: Sign Up interface for PlantPal App
  *
- *      @author: Reece Wayt, Truong Le, Gemini
- *      @date: 11/29/2025
+ *      @author: Truong Le, Gemini
+ *      @date: 12/6/2025
  *
  *      @description: This screen creates a sign-in screen for the app. It includes the following features:
  *          - Email and Password input fields
- *          - Sign In button
+ *          - Create Account button
  *          - Loading indicator during sign-in process
- *          - Sign Up button to navigate to Sign Up Screen
- *          The screen invokes functions from AccountServiceImpl.kt to sign in using the provided credentials.
- *      If the user types in invalid credentials or the credentials are malformed, it will notify the user
- *      with a text box that will say what error occurred. If the credentials are valid, the text box will
- *      tell the user that the credentials are authenticated and it will transition to the chat screen.
- * 
- *  @note: UI code adapted from Firebase Notes Example App:
- *      Source: https://github.com/FirebaseExtended/firebase-video-samples/tree/main/fundamentals/android/auth-email-password/Notes
+ *          - Sign In button to navigate to Sign In Screen
+ *          The screen invokes functions from AccountServiceImpl.kt to sign up using the provided credentials.
+ *      If the user types in an invalid email and invalid password that does not abide with the Firebase
+ *      password policy, it will notify the user with a text box that will say what error occurred. If the
+ *      credentials are valid, the text box will tell the user that the credentials are authenticated and
+ *      the screen will transition to the sign in screen.
+ *
  *  @note: This code has been developed using the assistance of Google Gemini and its code generation tools
  */
 
-
-package com.example.plantpal.screens.sign_in
-
+package com.example.plantpal.screens.sign_up
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -31,13 +28,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +48,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,56 +60,53 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.plantpal.R
 import com.example.plantpal.ui.theme.PlantPalTheme
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun SignInScreen(
+fun SignUpScreen(
     openAndPopUp: (String, String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SignInViewModel
+    viewModel: SignUpViewModel
 ) {
-    val email by viewModel.email.collectAsState()
-    val password by viewModel.password.collectAsState()
-    val signInLoading by viewModel.signInLoading.collectAsState()
-    val signInStatus by viewModel.signInStatus.collectAsState()
+    val email by viewModel.tempEmail.collectAsState()
+    val password by viewModel.tempPassword.collectAsState()
+    val signUpLoading by viewModel.signUpLoading.collectAsState()
+    val signUpStatus by viewModel.signUpStatus.collectAsState()
 
-
-    SignInScreenContent(
+    SignUpScreenContent(
         modifier = modifier,
         email = email,
         password = password,
-        signInLoading = signInLoading,
-        signInStatus = signInStatus,
+        signUpLoading = signUpLoading,
+        signUpStatus = signUpStatus,
         onEmailChange = viewModel::updateEmail,
         onPasswordChange = viewModel::updatePassword,
-        onSignInClick = { viewModel.onSignInClick(openAndPopUp) },
-        switchToSignUp = { viewModel.onSignUpClick(openAndPopUp) }
+        onSignUpClick = { viewModel.onSignUpClick(openAndPopUp) },
+        onBackToSignInClick = { viewModel.onSignInClick(openAndPopUp) }
     )
 }
 
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun SignInScreenContent(
+@Composable
+fun SignUpScreenContent(
     modifier: Modifier = Modifier,
     email: String,
     password: String,
-    signInLoading: Boolean,
-    signInStatus: String,
+    signUpLoading: Boolean,
+    signUpStatus: String,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onSignInClick: () -> Unit,
-    switchToSignUp: () -> Unit
+    onSignUpClick: () -> Unit,
+    onBackToSignInClick: () -> Unit
 ) {
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -126,16 +120,9 @@ fun SignInScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(id = R.mipmap.auth_image),
-                contentDescription = "Auth image",
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(16.dp, 4.dp)
-            )
 
             Text(
-                text = "PlantPal",
+                text = "Create Account",
                 fontSize = 32.sp,
                 modifier = modifier.padding(16.dp, 0.dp),
                 color = MaterialTheme.colorScheme.primary,
@@ -143,30 +130,21 @@ fun SignInScreenContent(
                 fontWeight = FontWeight.Bold
             )
 
-            // Column for loading/status indicators
             Column(
                 modifier = modifier
                     .fillMaxWidth()
                     .padding(16.dp, 5.dp)
-                    .size(30.dp),
+                    .size(60.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // ... AnimatedVisibility content remains the same ...
                 val density = LocalDensity.current
 
                 AnimatedVisibility(
-                    visible = signInLoading,
-                    enter = slideInVertically {
-                        with(density) { 40.dp.roundToPx() }
-                    } + expandVertically(
-                        expandFrom = Alignment.Bottom
-                    ) + fadeIn(
-                        initialAlpha = 0.3f
-                    ),
+                    visible = signUpLoading,
+                    enter = slideInVertically { with(density) { 40.dp.roundToPx() } } + expandVertically(expandFrom = Alignment.Bottom) + fadeIn(initialAlpha = 0.3f),
                     exit = slideOutVertically() + shrinkVertically() + fadeOut()
-                )
-                {
+                ) {
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primary,
@@ -174,24 +152,17 @@ fun SignInScreenContent(
                     )
                 }
 
-                // Show a status message only when not loading and status is present
                 AnimatedVisibility(
-                    visible = !signInLoading && signInStatus.isNotEmpty(),
-                    enter = slideInVertically {
-                        with(density) { 40.dp.roundToPx() }
-                    } + expandVertically(
-                        expandFrom = Alignment.Bottom
-                    ) + fadeIn(
-                        initialAlpha = 0.3f
-                    ),
+                    visible = !signUpLoading && signUpStatus.isNotEmpty(),
+                    enter = slideInVertically { with(density) { 40.dp.roundToPx() } } + expandVertically(expandFrom = Alignment.Bottom) + fadeIn(initialAlpha = 0.3f),
                     exit = slideOutVertically() + shrinkVertically() + fadeOut()
                 ) {
-                    val isSuccess = signInStatus == "Success"
+                    val isSuccess = signUpStatus == "Success"
                     Text(
                         text = when {
-                            signInStatus.isEmpty() -> ""
-                            isSuccess -> "Authenticated! Logging In..."
-                            else -> "Error: $signInStatus"
+                            signUpStatus.isEmpty() -> ""
+                            isSuccess -> "Account created! Navigating to Sign In..."
+                            else -> "Error: $signUpStatus"
                         },
                         color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center
@@ -200,7 +171,6 @@ fun SignInScreenContent(
             }
 
             OutlinedTextField(
-                // ... parameters remain the same ...
                 singleLine = true,
                 modifier = modifier
                     .fillMaxWidth()
@@ -217,18 +187,12 @@ fun SignInScreenContent(
                 ),
                 value = email,
                 onValueChange = { onEmailChange(it) },
-                placeholder = { Text(stringResource(R.string.email)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = "Email"
-                    )
-                },
-                enabled = !signInLoading && signInStatus != "Success"
+                placeholder = { Text("Email") },
+                leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = "Email") },
+                enabled = !signUpLoading && signUpStatus != "Success"
             )
 
             OutlinedTextField(
-                // ... parameters remain the same ...
                 singleLine = true,
                 modifier = modifier
                     .fillMaxWidth()
@@ -245,45 +209,40 @@ fun SignInScreenContent(
                 ),
                 value = password,
                 onValueChange = { onPasswordChange(it) },
-                placeholder = { Text(stringResource(R.string.password)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Email"
-                    )
-                },
+                placeholder = { Text("Password") },
+                leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = "Password") },
                 visualTransformation = PasswordVisualTransformation(),
-                enabled = !signInLoading && signInStatus != "Success"
+                enabled = !signUpLoading && signUpStatus != "Success"
             )
 
+            Spacer(modifier = Modifier.fillMaxWidth().padding(12.dp))
+
             Button(
-                // ... parameters remain the same ...
-                onClick = { onSignInClick() },
+                onClick = onSignUpClick,
                 shape = RoundedCornerShape(50),
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(10.dp),
+                    .padding(16.dp, 0.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!signInLoading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (!signInLoading) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    containerColor = if (!signUpLoading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (!signUpLoading) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
-                enabled = !signInLoading && signInStatus != "Success"
+                enabled = !signUpLoading && signUpStatus != "Success"
             ) {
                 Text(
-                    text = stringResource(R.string.sign_in),
+                    text = "Create Account",
                     fontSize = 16.sp,
                     modifier = modifier.padding(0.dp, 6.dp)
                 )
             }
 
-            // Sign Up Button
+            Spacer(modifier = Modifier.fillMaxWidth().padding(4.dp))
+
             TextButton(
-                modifier = modifier
-                    .fillMaxWidth(),
-                onClick = { switchToSignUp() },
-                enabled = !signInLoading && signInStatus != "Success"
+                onClick = { onBackToSignInClick() },
+                enabled = !signUpLoading && signUpStatus != "Success"
             ) {
-                Text(text = "Go to Sign Up", fontSize = 16.sp)
+                Text(text = "Back to Sign In", fontSize = 16.sp)
             }
         }
     }
@@ -291,17 +250,17 @@ fun SignInScreenContent(
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun AuthPreview() {
-    PlantPalTheme (dynamicColor = false) {
-        SignInScreenContent(
+fun SignUpPreview() {
+    PlantPalTheme(dynamicColor = false) {
+        SignUpScreenContent(
             email = "test@email.com",
             password = "password",
             onEmailChange = {},
             onPasswordChange = {},
-            onSignInClick = {},
-            switchToSignUp = {},
-            signInLoading = false,
-            signInStatus = ""
+            onSignUpClick = {},
+            onBackToSignInClick = {},
+            signUpLoading = false,
+            signUpStatus = ""
         )
     }
 }
