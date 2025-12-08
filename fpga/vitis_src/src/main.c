@@ -7,6 +7,7 @@
 #define LOG_TAG "MAIN"
 #include "logging.h"
 #include "arduino_task.h"
+#include "adc_testing.h" // <-- NEW: Include  header for the ADC testing task
 #include "led_animation_task.h"
 
 /************************** Global Instances *********************************/
@@ -70,6 +71,13 @@ static void prvPostStartupHook(void *pvParameters) {
     if (xTaskStatus != pdPASS) {
         DEBUG_PRINT("ERROR: Failed to initialize Arduino task\r\n");
     }
+    
+    // Initialize ADC Testing/Moisture Sensor task
+    xTaskStatus = xAdcTestTaskInit();
+    if (xTaskStatus != pdPASS) {
+        DEBUG_PRINT("ERROR: Failed to initialize ADC testing task\r\n");
+    }
+
 
     // Initialize LED Animation task
     xTaskStatus = xLedAnimationTaskInit(tskIDLE_PRIORITY + 1);
@@ -99,12 +107,8 @@ static int PlatformInit(void) {
     // TODO: Add hardware initialization here
     // Examples:
     // - Initialize GPIO for water pump control
-    // - Initialize I2C for moisture sensor
     // - Initialize timers
     // - Initialize other peripherals
     
     return XST_SUCCESS;
 }
-
-
-
