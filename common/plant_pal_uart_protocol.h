@@ -33,6 +33,7 @@
 #define RESP_WATER_ACK          0x21    // Water command acknowledged
 #define RESP_STATUS_OK          0x31    // Status OK / heartbeat response
 
+#define RESP_ERROR              0xFF    // Generic error response
 // ============================================
 // Frame Structure
 // ============================================

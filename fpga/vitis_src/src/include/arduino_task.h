@@ -21,4 +21,10 @@
  *
  * @return pdPASS if task was created successfully, pdFAIL otherwise
  */
-BaseType_t xArduinoTaskInit(void);
+BaseType_t xArduinoTaskInit(UBaseType_t priority);
+
+/**
+ * @brief Post a moisture message to the Arduino task
+ */
+
+BaseType_t xArduinoPostMoistureMessage(u8 percent);

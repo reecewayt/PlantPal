@@ -7,13 +7,11 @@
 #define LOG_TAG "MAIN"
 #include "logging.h"
 #include "arduino_task.h"
-#include "adc_testing.h" // <-- NEW: Include  header for the ADC testing task
+#include "sensor_task.h" 
 #include "led_animation_task.h"
+#include "nexys4io.h"
 
-/************************** Global Instances *********************************/
 
-
-/************************** Function Prototypes ******************************/
 static int PlatformInit(void);
 static void prvPostStartupHook(void *pvParameters);
 
@@ -67,24 +65,22 @@ static void prvPostStartupHook(void *pvParameters) {
     }
     
     // Initialize Arduino UART communication task
-    xTaskStatus = xArduinoTaskInit();
+    xTaskStatus = xArduinoTaskInit(tskIDLE_PRIORITY + 1);
     if (xTaskStatus != pdPASS) {
         DEBUG_PRINT("ERROR: Failed to initialize Arduino task\r\n");
     }
-    
-    // Initialize ADC Testing/Moisture Sensor task
-    xTaskStatus = xAdcTestTaskInit();
-    if (xTaskStatus != pdPASS) {
-        DEBUG_PRINT("ERROR: Failed to initialize ADC testing task\r\n");
-    }
-
 
     // Initialize LED Animation task
     xTaskStatus = xLedAnimationTaskInit(tskIDLE_PRIORITY + 1);
     if (xTaskStatus != pdPASS) {
         DEBUG_PRINT("ERROR: Failed to initialize LED Animation task\r\n");
     }
-    // TODO: Add additional application task initializations here
+    
+    // Initialize Sensor task
+    xTaskStatus = xSensorTaskInit(tskIDLE_PRIORITY + 2);
+    if (xTaskStatus != pdPASS) {
+        DEBUG_PRINT("ERROR: Failed to initialize Sensor task\r\n");
+    }
     
     DEBUG_PRINT("Post-startup initialization complete\r\n");
     
@@ -98,17 +94,25 @@ static void prvPostStartupHook(void *pvParameters) {
  * @brief Initialize platform hardware
  *
  * This function initializes hardware components needed for the application.
- * Currently a placeholder for future hardware initialization (sensors, GPIO, etc.)
+ * (i.e. GPIO, peripherals, etc.)
  *
  * @return XST_SUCCESS if successful, XST_FAILURE otherwise
  */
 static int PlatformInit(void) {
+    int status = XST_SUCCESS;
     
-    // TODO: Add hardware initialization here
-    // Examples:
-    // - Initialize GPIO for water pump control
-    // - Initialize timers
-    // - Initialize other peripherals
+    status = NX4IO_initialize(XPAR_NEXYS4IO_0_BASEADDR);
+    if (status != XST_SUCCESS)
+    {
+        DEBUG_PRINT("ERROR: Failed to initialize NEXYS4IO driver\r\n");
+        return XST_FAILURE;
+    }
+    // clear 7-seg display 
+    NX410_SSEG_setAllDigits(SSEGLO, CC_BLANK, CC_BLANK, CC_BLANK, CC_BLANK, DP_NONE);
+    NX410_SSEG_setAllDigits(SSEGHI, CC_BLANK, CC_BLANK, CC_BLANK, CC_BLANK, DP_NONE);
+
+    DEBUG_PRINT("NEXYS4IO driver initialized successfully\r\n");
     
-    return XST_SUCCESS;
+    
+    return status;
 }
