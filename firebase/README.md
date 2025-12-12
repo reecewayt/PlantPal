@@ -37,7 +37,7 @@ firebase emulators:start
 ```
 
 Connecting the Android app to the local emulator
-- The android code comes with a couple of lines that can be commented in or out depending on if you're using the local emulator for testing.
+- The android code comes with a couple of lines that need to be called from `MainActivity.kt` when using the local emulator.
 - See `android/app/src/main/java/com/example/plantpal/MainActivity.kt`
 ```kotlin
 private fun configFirebaseServices() {
@@ -54,9 +54,6 @@ private fun configFirebaseServices() {
     (whitelist local HTTP traffic so the emulator can reach your functions).
 
 
-# Testing
-Testing the functionality of firebase was achieve mostly through manual tests by running the emulator and check appropriate responses. Where appropriate, integration and unit tests can be found in `firebase/functions/tests/` directory.
-
 
 ## Important
 This app uses several api keys. Be sure you have properly set them up in your personal `.env` file.
@@ -69,14 +66,3 @@ A template has been provided as reference.
    export LANGSMITH_API_KEY="ls-..."  # Optional
    ```
 
-## Note on testing Pub/Sub locally
-When running local emulator suite, Pub/Sub functions can be trigger with commands using a curl POST from the terminal to the port it has been started on. For example:
-```bash
-curl -X POST "http://localhost:8085/v1/projects/plantpal-f1bfa/topics/data-moisture:publish" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{
-      "data": "eyJwZXJjZW50YWdlIjogNDUuNSwgInRpbWVzdGFtcCI6IDE3MzIzOTY4MDAwMDB9"
-    }]
-  }'
-```
