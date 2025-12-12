@@ -14,6 +14,7 @@
 #include "config.h"
 #include "xuartlite_l.h"
 #include "xil_printf.h"
+#include "queue.h"
 #include <string.h>
 
 #define LOG_TAG "ARDUINO_TASK"
@@ -22,6 +23,7 @@
 // Include the shared protocol header
 #include "plant_pal_uart_protocol.h"
 #include "led_animation_task.h"
+#include "sensor_task.h"
 
 /************************** Local Definitions ********************************/
 #define RX_BUFFER_SIZE          64
@@ -134,19 +136,25 @@ static void prvSendFrame(u8 command, u8 length, const u8 *payload) {
 /**
  * @brief Handle CMD_READ_MOISTURE command
  *
- * Reads the current moisture sensor value and sends back a RESP_MOISTURE_DATA
- * response with the moisture percentage.
+ * Reads the current moisture sensor value from the global reading and sends
+ * back a RESP_MOISTURE_DATA response with the moisture percentage.
  */
 static void prvHandleReadMoisture(void) {
     DEBUG_PRINT("Received CMD_READ_MOISTURE\r\n");
     
-    // TODO: Read actual moisture sensor value
-    // For now, return a placeholder value
     MoistureDataPayload response;
-    response.moisture_percent = 50; // Placeholder: 50%
     
-    DEBUG_PRINT("Sending RESP_MOISTURE_DATA: %d%%\r\n", response.moisture_percent);
-    prvSendFrame(RESP_MOISTURE_DATA, sizeof(MoistureDataPayload), (u8*)&response);
+    // Read the latest moisture data from the global reading
+    if (SensorGetLatestReading(&response.moisture_percent)) {
+        DEBUG_PRINT("Sending RESP_MOISTURE_DATA: %d%%\r\n", response.moisture_percent);
+        prvSendFrame(RESP_MOISTURE_DATA, sizeof(MoistureDataPayload), (u8*)&response);
+    } else {
+        // No valid reading available
+        response.moisture_percent = 0;
+        DEBUG_PRINT("Warning: No valid moisture reading available\r\n");
+        prvSendFrame(RESP_ERROR, sizeof(MoistureDataPayload), (u8*)&response);
+    }
+    
 }
 
 /*****************************************************************************/
@@ -172,11 +180,6 @@ static void prvHandleWaterOn(const u8 *payload, u8 length) {
     
     DEBUG_PRINT("Water pump ON for %d seconds\r\n", duration);
     
-    // TODO: Turn on water pump for specified duration
-    // This would typically:
-    // 1. Turn on pump GPIO
-    // 2. Set a timer for duration_seconds
-    // 3. Turn off pump when timer expires
     BaseType_t result = xSendLedAnimationCommand(duration);
     
     if (result != pdPASS) {
@@ -197,8 +200,6 @@ static void prvHandleWaterOn(const u8 *payload, u8 length) {
  */
 static void prvHandleStatusRequest(void) {
     DEBUG_PRINT("Received CMD_STATUS_REQUEST\r\n");
-    
-    // TODO: Optionally check system health status here
     
     DEBUG_PRINT("Sending RESP_STATUS_OK\r\n");
     prvSendFrame(RESP_STATUS_OK, 0, NULL);
@@ -276,13 +277,11 @@ static void prvArduinoTask(void *pvParameters) {
 
 /*****************************************************************************/
 /**
- * @brief Initialize the Arduino UART communication task
- *
- * Creates and starts the Arduino task with appropriate priority and stack size.
- *
+ * @brief Creates and starts the Arduino UART communication task
+ * @param priority Task priority for the Arduino task
  * @return pdPASS if task was created successfully, pdFAIL otherwise
  */
-BaseType_t xArduinoTaskInit(void) {
+BaseType_t xArduinoTaskInit(UBaseType_t priority) {
     BaseType_t xStatus;
     
     DEBUG_PRINT("Initializing Arduino UART task...\r\n");
@@ -293,7 +292,7 @@ BaseType_t xArduinoTaskInit(void) {
         "ArduinoTask",                      // Task name
         configMINIMAL_STACK_SIZE * 2,      // Stack size
         NULL,                               // Task parameters
-        tskIDLE_PRIORITY + 2,               // Task priority (higher than polling example)
+        priority,                          // Task priority (passed as parameter)
         &xArduinoTaskHandle                 // Task handle
     );
     

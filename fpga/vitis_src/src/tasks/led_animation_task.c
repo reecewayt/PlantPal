@@ -35,11 +35,8 @@ BaseType_t xLedAnimationTaskInit(UBaseType_t priority) {
 
     // create queue, can only handle 1 command at a time
     prvLedCommandQueue = xQueueCreate(1, sizeof(int));
-
-    // initialize nexys4IO 
-    int status = NX4IO_initialize(NX4IO_BASEADDR);
-    if (status != XST_SUCCESS) {
-        DEBUG_PRINT("ERROR: Failed to initialize NEXYS4IO driver\r\n");
+    if (prvLedCommandQueue == NULL) {
+        DEBUG_PRINT("ERROR: Failed to create LED Animation command queue\r\n");
         return pdFAIL;
     }
     
